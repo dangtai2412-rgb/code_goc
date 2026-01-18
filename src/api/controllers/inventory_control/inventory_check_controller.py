@@ -37,6 +37,15 @@ def create_check(current_user, service: InventoryCheckService = Provide[Containe
 @token_required
 @inject
 def get_history(current_user, service: InventoryCheckService = Provide[Container.inventory_check_service]):
+    """
+    Lấy lịch sử các phiên kiểm kho
+    ---
+    tags: [Inventory - Check]
+    security: [{BearerAuth: []}]
+    responses:
+      200:
+        description: Danh sách các phiếu kiểm
+    """
     try:
         owner_id = getattr(current_user, 'owner_id', None)
         checks = service.get_history(owner_id)
@@ -58,6 +67,22 @@ def get_history(current_user, service: InventoryCheckService = Provide[Container
 @token_required
 @inject
 def get_check_detail(check_id, current_user, service: InventoryCheckService = Provide[Container.inventory_check_service]):
+    """
+    Xem chi tiết một phiếu kiểm kho
+    ---
+    tags: [Inventory - Check]
+    security: [{BearerAuth: []}]
+    parameters:
+      - name: check_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Chi tiết phiếu kiểm và chênh lệch
+      404:
+        description: Không tìm thấy phiếu
+    """
     try:
         check = service.get_detail(check_id)
         if not check:

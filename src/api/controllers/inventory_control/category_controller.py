@@ -10,6 +10,24 @@ category_bp = Blueprint('category_bp', __name__)
 @token_required
 @inject
 def create_category(current_user, service: CategoryService = Provide[Container.category_service]):
+    """
+    Tạo danh mục sản phẩm mới
+    ---
+    tags: [Inventory - Category]
+    security: [{BearerAuth: []}]
+    parameters:
+      - in: body
+        name: body
+        schema:
+          properties:
+            category_name: {type: string, example: "Gạch ốp lát"}
+            description: {type: string, example: "Các loại gạch men cao cấp"}
+    responses:
+      201:
+        description: Tạo thành công
+      400:
+        description: Lỗi dữ liệu đầu vào
+    """
     try:
         owner_id = getattr(current_user, 'owner_id', None)
         data = request.json
@@ -28,6 +46,17 @@ def create_category(current_user, service: CategoryService = Provide[Container.c
 @token_required
 @inject
 def list_categories(current_user, service: CategoryService = Provide[Container.category_service]):
+    """
+    Lấy danh sách tất cả danh mục của cửa hàng
+    ---
+    tags: [Inventory - Category]
+    security: [{BearerAuth: []}]
+    responses:
+      200:
+        description: Danh sách danh mục
+      500:
+        description: Lỗi hệ thống
+    """
     try:
         owner_id = getattr(current_user, 'owner_id', None)
         categories = service.get_categories(owner_id)

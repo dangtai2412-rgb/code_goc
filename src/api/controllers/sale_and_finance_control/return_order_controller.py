@@ -11,16 +11,29 @@ return_order_bp = Blueprint('return_order_bp', __name__)
 @inject
 def create_return_order(current_user, service: ReturnOrderService = Provide[Container.return_order_service]):
     """
-    Tạo phiếu trả hàng
-    Input:
-    {
-        "order_id": 12,
-        "reason": "Khách đổi ý",
-        "refund_amount": 50000,
-        "details": [
-            {"product_id": 1, "quantity": 2, "condition": "Good"}
-        ]
-    }
+    Tạo phiếu trả hàng và hoàn tồn kho
+    ---
+    tags: [Sales - Return]
+    security: [{BearerAuth: []}]
+    parameters:
+      - in: body
+        name: body
+        schema:
+          required: [order_id, details]
+          properties:
+            order_id: {type: integer, example: 12}
+            reason: {type: string, example: "Hàng lỗi nhà sản xuất"}
+            refund_amount: {type: number, example: 50000}
+            details:
+              type: array
+              items:
+                properties:
+                  product_id: {type: integer}
+                  quantity: {type: integer}
+                  condition: {type: string, enum: [Good, Broken]}
+    responses:
+      201:
+        description: Trả hàng thành công
     """
     try:
         owner_id = getattr(current_user, 'owner_id', None)

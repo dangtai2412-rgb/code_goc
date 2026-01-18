@@ -10,6 +10,23 @@ expense_bp = Blueprint('expense_bp', __name__)
 @token_required
 @inject
 def create_expense(current_user, service: ExpenseService = Provide[Container.expense_service]):
+    """
+    Ghi nhận một khoản chi phí mới
+    ---
+    tags: [Finance - Expense]
+    security: [{BearerAuth: []}]
+    parameters:
+      - in: body
+        name: body
+        schema:
+          properties:
+            category: {type: string, example: "Tiền điện"}
+            amount: {type: number, example: 1500000}
+            description: {type: string, example: "Thanh toán hóa đơn tháng 1"}
+    responses:
+      201:
+        description: Đã lưu khoản chi
+    """
     try:
         owner_id = getattr(current_user, 'owner_id', None)
         data = request.json
@@ -28,6 +45,15 @@ def create_expense(current_user, service: ExpenseService = Provide[Container.exp
 @token_required
 @inject
 def list_expenses(current_user, service: ExpenseService = Provide[Container.expense_service]):
+    """
+    Lấy lịch sử các khoản chi
+    ---
+    tags: [Finance - Expense]
+    security: [{BearerAuth: []}]
+    responses:
+      200:
+        description: Danh sách khoản chi
+    """
     try:
         owner_id = getattr(current_user, 'owner_id', None)
         expenses = service.get_history(owner_id)
