@@ -114,7 +114,10 @@ class Container(containers.DeclarativeContainer):
     debt_repo = providers.Factory(DebtRepository, session=db_session)
     return_order_repo = providers.Factory(ReturnOrderRepository, session=db_session)
     expense_repo = providers.Factory(ExpenseRepository, session=db_session)
-    account_report_repo = providers.Factory(AccountReportRepository, session=db_session)
+    account_report_repository = providers.Factory(
+        AccountReportRepository
+    )
+
 
     ai_assistant_repo = providers.Factory(AIAssistantRepository, session=db_session)
     ai_draft_order_repo = providers.Factory(AIDraftOrderRepository, session=db_session)
@@ -168,7 +171,7 @@ class Container(containers.DeclarativeContainer):
     )
 
     expense_service = providers.Factory(ExpenseService, repository=expense_repo)
-    account_report_service = providers.Factory(AccountReportService, repository=account_report_repo)
+    
 
     ai_assistant_service = providers.Factory(AIAssistantService, repository=ai_assistant_repo)
     ai_draft_order_service = providers.Factory(
@@ -178,5 +181,7 @@ class Container(containers.DeclarativeContainer):
         product_service=product_service,
         customer_service=customer_service
     )
-    
-    
+    report_service = providers.Factory(
+        AccountReportService,
+        repository=account_report_repository
+    )
