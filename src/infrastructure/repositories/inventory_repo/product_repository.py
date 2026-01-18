@@ -45,9 +45,7 @@ class ProductRepository:
         Tìm kiếm một sản phẩm cụ thể theo ID.
         """
         return self.session.query(ProductModel).filter_by(product_id=product_id).first()
-    def get_by_id(self, product_id):
-        """Lấy 1 sản phẩm theo ID"""
-        return self.session.query(ProductModel).filter_by(product_id=product_id).first()
+    
 
     def update(self, product_model):
         """Lưu các thay đổi của sản phẩm"""

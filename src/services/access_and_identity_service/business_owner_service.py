@@ -1,37 +1,25 @@
-from domain.models.business_owner import BusinessOwner
 from werkzeug.security import generate_password_hash
+from infrastructure.models.access_and_identity.business_owner_model import BusinessOwnerModel
 
 class BusinessOwnerService:
     def __init__(self, repository):
-        self.repository = repository
+        self.repo = repository
 
     def create_owner(self, data):
-        # 1. Kiểm tra logic nghiệp vụ
-        email = data.get('email')
-        if not email or "@" not in email:
-            raise ValueError("Email không hợp lệ!")
+        # Validate cơ bản
+        if not data.get('email') or not data.get('password'):
+            raise ValueError("Email và Password là bắt buộc")
 
-        phone = data.get('phone_number') # Khớp với key trong data gửi lên
-        if not phone or len(phone) < 10:
-            raise ValueError("Số điện thoại phải có ít nhất 10 chữ số!")
+        # Tự động gán Plan ID = 1 (Gói dùng thử) nếu không chọn
+        plan_id = data.get('plan_id', 1)
 
-        # 2. Mã hóa mật khẩu trước khi lưu (Bảo mật)
-        raw_password = data.get('password', '123456')
-        hashed_password = generate_password_hash(raw_password)
-
-        # 3. Đóng gói vào Domain
-        new_owner_domain = BusinessOwner(
+        new_owner = BusinessOwnerModel(
             owner_name=data.get('owner_name'),
-            email=email,
-            phone_number=phone,
-            admin_id=data.get('admin_id'),
-            plan_id=data.get('plan_id'),
-            account_status=data.get('account_status', 'Active')
+            phone_number=data.get('phone_number'),
+            email=data.get('email'),
+            password=generate_password_hash(data.get('password')),
+            account_status='Active',
+            plan_id=plan_id,
+            admin_id=None
         )
-        # Gán thêm password vào domain nếu domain có thuộc tính này
-        new_owner_domain.password = hashed_password 
-        
-        return self.repository.add(new_owner_domain)
-
-    def list_all_owners(self): # Tên hàm thống nhất
-        return self.repository.get_all()
+        return self.repo.add(new_owner)
