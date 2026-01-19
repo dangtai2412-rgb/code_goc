@@ -1,17 +1,16 @@
 from infrastructure.models.sale_and_finance.customer_model import CustomerModel
 from infrastructure.databases.mssql import session
-
+from domain.models.customer import Customer
 class CustomerRepository:
     def __init__(self, db_session=session):
         self.session = db_session
 
-    def add(self, name, phone, address, owner_id):
-        # Thêm owner_id vào đây để khớp với Model
+    def add(self, cust: Customer): # NHẬN ĐỐI TƯỢNG DOMAIN
         db_cust = CustomerModel(
-            customer_name=name, 
-            phone_number=phone, 
-            address=address,
-            owner_id=owner_id
+            customer_name=cust.customer_name, 
+            phone_number=cust.phone_number, 
+            address=cust.address,
+            owner_id=cust.owner_id
         )
         try:
             self.session.add(db_cust)
@@ -21,6 +20,7 @@ class CustomerRepository:
         except Exception as e:
             self.session.rollback()
             raise e
+        
 
     def get_all(self):
         return self.session.query(CustomerModel).all()
