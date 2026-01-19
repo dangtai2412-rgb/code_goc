@@ -167,7 +167,7 @@ class Container(containers.DeclarativeContainer):
     return_order_service = providers.Factory(
         ReturnOrderService, 
         repository=return_order_repo,
-        product_repo=product_repo # ✅ Đã thêm dòng này
+        product_repo=product_repo  # 👈 BẮT BUỘC PHẢI CÓ DÒNG NÀY
     )
 
     expense_service = providers.Factory(ExpenseService, repository=expense_repo)
