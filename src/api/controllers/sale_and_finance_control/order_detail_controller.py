@@ -2,13 +2,13 @@ from flask import Blueprint, request, jsonify
 from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
-
+from services.sale_and_finance_service.order_detail_service import OrderDetailService
 order_detail_bp = Blueprint('order_detail_bp', __name__)
 
 @order_detail_bp.route('/', methods=['POST'])
 @token_required
 @inject
-def add_order_detail(detail_service = Provide[Container.order_detail_service]):
+def add_order_detail(current_user, detail_service: OrderDetailService = Provide[Container.order_detail_service]):
     """
     Thêm chi tiết sản phẩm vào đơn hàng
     ---
@@ -28,8 +28,16 @@ def add_order_detail(detail_service = Provide[Container.order_detail_service]):
     """
     try:
         data = request.get_json()
-        # Service sẽ lo việc tạo model và tính toán line_total
+        # Tự động gán owner_id từ user đang đăng nhập
+        data['owner_id'] = getattr(current_user, 'owner_id', None)
+        
+        # Lấy ID người tạo (nhân viên hoặc chủ)
+        user_id = getattr(current_user, 'user_id', None) or getattr(current_user, 'owner_id', None)
+        
         result = detail_service.create_detail(data)
-        return jsonify({"message": "Thêm chi tiết thành công", "id": result.detail_id}), 201
+        return jsonify({
+            "message": "Tạo đơn hàng thành công", 
+            "order_id": result.order_id
+        }), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 400

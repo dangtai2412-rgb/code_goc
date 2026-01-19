@@ -2,13 +2,13 @@ from flask import Blueprint, request, jsonify
 from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
-
+from services.sale_and_finance_service.debt_service import DebtService
 debt_bp = Blueprint('debt_bp', __name__)
 
 @debt_bp.route('/', methods=['POST'])
 @token_required
 @inject
-def create_customer_debt(debt_service = Provide[Container.debt_service]):
+def create_customer_debt(current_user, debt_service: DebtService = Provide[Container.debt_service]):
     """
     Ghi nhận công nợ mới
     ---
@@ -27,7 +27,6 @@ def create_customer_debt(debt_service = Provide[Container.debt_service]):
     """
     try:
         data = request.get_json()
-        # Gọi service thay vì gọi trực tiếp
         result = debt_service.create_debt_from_order(
             data.get('order_id'), 
             data.get('customer_id'), 

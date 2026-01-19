@@ -39,7 +39,7 @@ account_report_bp = Blueprint('account_report_bp', __name__)
 @account_report_bp.route('/tt88', methods=['GET'])
 @token_required
 @inject
-def get_tt88_report(report_service = Provide[Container.report_service]):
+def get_tt88_report(current_user, service: AccountReportService = Provide[Container.account_report_service]):
     """
     Lấy báo cáo Sổ chi tiết doanh thu (Thông tư 88)
     Query param: ?date=YYYY-MM-DD
@@ -55,3 +55,59 @@ def get_tt88_report(report_service = Provide[Container.report_service]):
         return jsonify(report_data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@account_report_bp.route('/dashboard', methods=['GET'])
+@token_required
+@inject
+# 👇 SỬA Ở ĐÂY: Dùng Container.account_report_service
+def get_dashboard_stats(current_user, service: AccountReportService = Provide[Container.account_report_service]):
+    """
+    Lấy thống kê Dashboard (Doanh thu, Đơn hàng, Tồn kho)
+    ---
+    tags: [Reports]
+    security: [{BearerAuth: []}]
+    """
+    try:
+        # Hỗ trợ lấy ID từ cả Owner và Employee
+        owner_id = getattr(current_user, 'owner_id', None) or getattr(current_user, 'user_id', None)
+        
+        data = service.get_dashboard_stats(owner_id)
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+@account_report_bp.route('/chart', methods=['GET'])
+@token_required
+@inject
+# 👇 SỬA Ở ĐÂY LUÔN
+def get_chart_data(current_user, service: AccountReportService = Provide[Container.account_report_service]):
+    """
+    Lấy dữ liệu biểu đồ doanh thu 7 ngày
+    ---
+    tags: [Reports]
+    security: [{BearerAuth: []}]
+    """
+    try:
+        owner_id = getattr(current_user, 'owner_id', None)
+        data = service.get_revenue_chart(owner_id)
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+@account_report_bp.route('/top-products', methods=['GET'])
+@token_required
+@inject
+# 👇 VÀ CẢ Ở ĐÂY NỮA
+def get_top_products(current_user, service: AccountReportService = Provide[Container.account_report_service]):
+    """
+    Lấy Top 5 sản phẩm bán chạy
+    ---
+    tags: [Reports]
+    security: [{BearerAuth: []}]
+    """
+    try:
+        owner_id = getattr(current_user, 'owner_id', None)
+        data = service.get_top_products(owner_id)
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500

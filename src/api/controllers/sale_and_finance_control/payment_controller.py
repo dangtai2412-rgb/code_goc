@@ -2,13 +2,14 @@ from flask import Blueprint, request, jsonify
 from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
+from services.sale_and_finance_service.payment_service import PaymentService
 
 payment_bp = Blueprint('payment_bp', __name__)
 
 @payment_bp.route('/', methods=['POST'])
 @token_required
 @inject
-def process_debt_payment(payment_service = Provide[Container.payment_service]):
+def process_debt_payment(current_user, payment_service: PaymentService = Provide[Container.payment_service]):
     """
     Thanh toán công nợ
     ---
@@ -18,12 +19,11 @@ def process_debt_payment(payment_service = Provide[Container.payment_service]):
       - in: body
         name: body
         schema:
+          required: [debt_id, amount]
           properties:
-            debt_id: {type: integer, example: 1}
-            amount: {type: number, example: 200000}
-            payment_method: {type: string, example: "Transfer"}
-    responses:
-      201: {description: "Thành công"}
+            debt_id: {type: integer}
+            amount: {type: number}
+            payment_method: {type: string}
     """
     try:
         data = request.get_json()
