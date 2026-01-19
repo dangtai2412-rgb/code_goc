@@ -115,10 +115,7 @@ class Container(containers.DeclarativeContainer):
     # ==========================================================
     
     # Auth & Identity
-    administrator_repository = providers.Factory(
-        AdministratorRepository,
-        db_session=session  # SỬA: 'session' thành 'db_session'
-    )
+    
     business_owner_repository = providers.Factory(BusinessOwnerRepository, session=db_session)
     employee_repository = providers.Factory(
         EmployeeRepository,
@@ -149,12 +146,20 @@ class Container(containers.DeclarativeContainer):
     ai_assistant_repository = providers.Factory(AIAssistantRepository, session=db_session)
     ai_draft_order_repository = providers.Factory(AIDraftOrderRepository, session=db_session)
     
+    administrator_repository = providers.Factory(
+        AdministratorRepository,
+        db_session=session # Đảm bảo tên 'db_session' khớp với repo
+    )
 
     # ==========================================================
     # 4. REGISTER SERVICES
     # ==========================================================
 
     # --- 1. CORE SERVICES (Độc lập) ---
+    administrator_service = providers.Factory(
+        AdministratorService, 
+        repository=administrator_repository # Đã đổi từ admin_repo thành administrator_repo
+    )
     auth_service = providers.Factory(
         AuthService,
         admin_repo=administrator_repository,
@@ -163,7 +168,7 @@ class Container(containers.DeclarativeContainer):
         secret_key=Config.SECRET_KEY # Truyền key từ file config vào đây
     )
 
-    administrator_service = providers.Factory(AdministratorService, repository=admin_repository)
+    
     business_owner_service = providers.Factory(BusinessOwnerService, repository=business_owner_repository)
     employee_service = providers.Factory(EmployeeService, repository=employee_repository)
     subscription_plan_service = providers.Factory(SubscriptionPlanService, repository=subscription_plan_repository)
