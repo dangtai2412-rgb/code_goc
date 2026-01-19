@@ -10,7 +10,42 @@ subscription_plan_bp = Blueprint('subscription_plan_bp', __name__)
 @inject
 def create_new_subscription_plan(plan_service = Provide[Container.subscription_plan_service]):
     """
-    Tạo gói cước dịch vụ mới
+    Tạo gói cước dịch vụ mới (Admin)
+    ---
+    tags:
+      - Subscription Plan
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - plan_name
+            - price
+            - duration
+          properties:
+            plan_name:
+              type: string
+              example: "Gói Cơ Bản (Basic)"
+            price:
+              type: number
+              format: float
+              example: 199000
+            duration:
+              type: integer
+              description: Thời hạn gói (ngày)
+              example: 30
+            description:
+              type: string
+              example: "Dành cho cửa hàng nhỏ"
+    responses:
+      201:
+        description: Tạo thành công
+      400:
+        description: Lỗi dữ liệu
     """
     try:
         data = request.get_json()
@@ -20,15 +55,27 @@ def create_new_subscription_plan(plan_service = Provide[Container.subscription_p
         return jsonify({"error": str(e)}), 400
 
 @subscription_plan_bp.route('/', methods=['GET'])
-@inject  # Có thể không cần token nếu muốn public danh sách gói cước
+@inject
 def list_all_plans(plan_service = Provide[Container.subscription_plan_service]):
     """
     Lấy danh sách các gói cước
+    ---
+    tags:
+      - Subscription Plan
+    responses:
+      200:
+        description: Danh sách gói cước
     """
     try:
-        plans = plan_service.get_all_plans()
+        plans = plan_service.list_plans()
         return jsonify([
-            {"id": p.plan_id, "name": p.plan_name, "price": float(p.price)} 
+            {
+                "id": p.plan_id, 
+                "name": p.plan_name, 
+                "price": float(p.price),
+                "duration": p.duration,
+                "description": p.description
+            } 
             for p in plans
         ]), 200
     except Exception as e:

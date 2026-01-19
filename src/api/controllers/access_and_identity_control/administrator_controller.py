@@ -9,7 +9,35 @@ admin_bp = Blueprint('admin_bp', __name__)
 @inject
 def create(admin_service = Provide[Container.administrator_service]):
     """
-    Tạo Admin mới
+    Tạo tài khoản Administrator mới (Super Admin)
+    ---
+    tags:
+      - Administrator
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - admin_name
+            - email
+            - password
+          properties:
+            admin_name:
+              type: string
+              example: "Super Admin"
+            email:
+              type: string
+              example: "admin@system.com"
+            password:
+              type: string
+              example: "admin123"
+    responses:
+      201:
+        description: Tạo thành công
+      400:
+        description: Lỗi dữ liệu
     """
     try:
         data = request.get_json()
@@ -24,10 +52,17 @@ def create(admin_service = Provide[Container.administrator_service]):
 def list_admins(admin_service = Provide[Container.administrator_service]):
     """
     Lấy danh sách Admin
+    ---
+    tags:
+      - Administrator
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Danh sách Admin
     """
     try:
         admins = admin_service.get_all_admins()
-        # Giả sử model có to_dict hoặc bạn tự map
-        return jsonify([{"id": a.admin_id, "name": a.admin_name} for a in admins]), 200
+        return jsonify([{"id": a.admin_id, "name": a.admin_name, "email": a.email} for a in admins]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
