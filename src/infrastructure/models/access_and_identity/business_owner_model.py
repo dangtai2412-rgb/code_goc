@@ -1,16 +1,16 @@
+# src/infrastructure/models/access_and_identity/business_owner_model.py
 from sqlalchemy import Column, Integer, String, ForeignKey
 from infrastructure.databases.base import Base
 
 class BusinessOwnerModel(Base):
     __tablename__ = 'business_owners'
-    #__table_args__ = {'extend_existing': True}
-
     owner_id = Column(Integer, primary_key=True, autoincrement=True)
     owner_name = Column(String(100), nullable=False)
-    phone_number = Column(String(20))
-    email = Column(String(100))
-    account_status = Column(String(20))
-    # Khóa ngoại nối đến Admin
-    admin_id = Column(Integer, ForeignKey('administrators.admin_id'))
-    plan_id = Column(Integer) # Sau này nối đến SubscriptionPlan
+    email = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
+    phone_number = Column(String(15), nullable=True)
+    account_status = Column(String(20), default='Active')
+    
+    # Khóa ngoại trỏ sang bảng gói cước
+    plan_id = Column(Integer, ForeignKey('subscription_plans.plan_id'), nullable=False)
+    admin_id = Column(Integer, ForeignKey('administrators.admin_id'), nullable=True)

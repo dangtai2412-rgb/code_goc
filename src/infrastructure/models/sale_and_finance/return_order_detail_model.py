@@ -7,5 +7,6 @@ class ReturnOrderDetailModel(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     return_id = Column(Integer, ForeignKey('return_orders.return_id'), nullable=False)
     product_id = Column(Integer, ForeignKey('products.product_id'), nullable=False)
+    
     quantity = Column(Integer, nullable=False)
-    condition = Column(String(50), default='Good') # Tình trạng: Tốt/Hỏng
+    condition = Column(String(50), default='Good')
