@@ -40,6 +40,6 @@ def token_required(f):
         except Exception as e:
             return jsonify({'message': 'Lỗi xác thực: ' + str(e)}), 401
 
-        return f(*args, **kwargs)
+        return f(data,*args, **kwargs)
 
     return decorated

@@ -6,9 +6,11 @@ from infrastructure.databases import init_db
 from app_logging import setup_logging
 from cors import init_cors
 from dependency_container import Container
+from flasgger import Swagger
 
 def create_app():
     app = Flask(__name__)
+    app.config.from_object(Config)
     # Trong hàm create_app():
     container = Container()
     container.wire(modules=[
@@ -31,19 +33,25 @@ def create_app():
         "api.controllers.inventory_control.product_controller",
         
     ])
-    app.container = container
-    
-
-    
-    app.config.from_object(Config)
-
-
-
-
-    setup_logging(app)
-    init_db(app)
     init_cors(app)
-    setup_middleware(app)
+    setup_logging(app)
+    swagger_config = {
+        "headers": [],
+        "specs": [{"endpoint": 'apispec', "route": '/apispec.json'}],
+        "static_url_path": "/flasgger_static",
+        "swagger_ui": True,
+        "specs_route": "/docs/", # Đường dẫn vào Swagger của bạn
+        "securityDefinitions": {
+            "BearerAuth": {
+                "type": "apiKey", "name": "Authorization", "in": "header",
+                "description": "Nhập theo cú pháp: Bearer <token>"
+            }
+        }
+    }
+    Swagger(app, config=swagger_config)
+    
+    # BƯỚC 4: Đăng ký các Route và Database
     register_routes(app)
+    init_db(app)
 
     return app

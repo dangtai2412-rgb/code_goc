@@ -37,13 +37,19 @@ def post_order(current_user, order_service: OrderService = Provide[Container.ord
     """
     try:
         data = request.get_json()
-        # Tự động gán owner_id từ user đang đăng nhập
-        data['owner_id'] = getattr(current_user, 'owner_id', None)
         
-        # Lấy ID người tạo (nhân viên hoặc chủ)
-        user_id = getattr(current_user, 'user_id', None) or getattr(current_user, 'owner_id', None)
+        # SỬA TẠI ĐÂY: Lấy thông tin từ Dictionary 'current_user'
+        # Trong Token của bạn thường có: user_id, role, owner_id
         
-        result = order_service.create_order(data, user_id)
+        # 1. Xác định owner_id (Nếu là chủ thì user_id chính là owner_id)
+        token_owner_id = current_user.get('owner_id') or current_user.get('user_id')
+        data['owner_id'] = token_owner_id
+        
+        # 2. Lấy ID người trực tiếp tạo đơn
+        creator_id = current_user.get('user_id')
+        
+        result = order_service.create_order(data, creator_id)
+        
         return jsonify({
             "message": "Tạo đơn hàng thành công", 
             "order_id": result.order_id

@@ -7,3 +7,4 @@ class BusinessOwner:
         self.phone_number = phone_number
         self.email = email
         self.account_status = account_status
+        self.password = password

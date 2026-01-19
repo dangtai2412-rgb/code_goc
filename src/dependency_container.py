@@ -69,7 +69,7 @@ from services.ai_sore_service.ai_draft_order_service import AIDraftOrderService
 
 
 class Container(containers.DeclarativeContainer):
-    
+    db_session_provider = providers.Object(session)
     # 🛠️ CẤU HÌNH WIRING (Đây là chỗ bạn bị thiếu, mình đã điền đủ 100%)
     wiring_config = containers.WiringConfiguration(modules=[
         # Auth
@@ -114,43 +114,57 @@ class Container(containers.DeclarativeContainer):
     # 3. REGISTER REPOSITORIES
     # ==========================================================
     
-    # Auth & Identity
-    
-    business_owner_repository = providers.Factory(BusinessOwnerRepository, session=db_session)
-    employee_repository = providers.Factory(
-        EmployeeRepository,
-        db_session=session  # SỬA: 'session' thành 'db_session'
+    subscription_plan_repository = providers.Factory(
+        SubscriptionPlanRepository, 
+        session=db_session_provider # Giữ là 'session' nếu repo này dùng tên đó
     )
-    subscription_plan_repository = providers.Factory(SubscriptionPlanRepository, session=db_session)
 
-    # Inventory
-    product_repository = providers.Factory(ProductRepository, session=db_session)
-    unit_repository = providers.Factory(UnitRepository, session=db_session)
-    supplier_repository = providers.Factory(SupplierRepository, session=db_session)
-    stock_import_repository = providers.Factory(StockImportRepository, session=db_session)
-    stock_import_detail_repository = providers.Factory(StockImportDetailRepository, session=db_session)
-    category_repository = providers.Factory(CategoryRepository, session=db_session)
-    inventory_check_repository = providers.Factory(InventoryCheckRepository, session=db_session)
+    business_owner_repository = providers.Factory(
+        BusinessOwnerRepository,
+        session=db_session_provider # Giữ là 'session' vì BusinessOwnerRepository dùng 'session'
+    )
 
-    # Sale & Finance
-    customer_repository = providers.Factory(CustomerRepository, session=db_session)
-    order_repository = providers.Factory(OrderRepository, session=db_session)
-    order_detail_repository = providers.Factory(OrderDetailRepository, session=db_session)
-    payment_repository = providers.Factory(PaymentRepository, session=db_session)
-    debt_repository = providers.Factory(DebtRepository, session=db_session)
-    return_order_repository = providers.Factory(ReturnOrderRepository, session=db_session)
-    expense_repository = providers.Factory(ExpenseRepository, session=db_session)
-    account_report_repository = providers.Factory(AccountReportRepository, session=db_session)
-
-    # AI & Todo
-    ai_assistant_repository = providers.Factory(AIAssistantRepository, session=db_session)
-    ai_draft_order_repository = providers.Factory(AIDraftOrderRepository, session=db_session)
-    
     administrator_repository = providers.Factory(
         AdministratorRepository,
-        db_session=session # Đảm bảo tên 'db_session' khớp với repo
+        db_session=db_session_provider # Dùng 'db_session'
     )
 
+    employee_repository = providers.Factory(
+        EmployeeRepository,
+        db_session=db_session_provider # Dùng 'db_session'
+    )
+
+    # Inventory - SỬA LẠI TẤT CẢ THÀNH 'db_session' CHO KHỚP VỚI REPO
+    product_repository = providers.Factory(
+        ProductRepository, 
+        db_session=db_session_provider # Đã sửa từ 'session' thành 'db_session'
+    )
+    
+    unit_repository = providers.Factory(UnitRepository, db_session=db_session_provider)
+    supplier_repository = providers.Factory(SupplierRepository, db_session=db_session_provider)
+    stock_import_repository = providers.Factory(StockImportRepository, db_session=db_session_provider)
+    stock_import_detail_repository = providers.Factory(StockImportDetailRepository, db_session=db_session_provider)
+    category_repository = providers.Factory(CategoryRepository, db_session=db_session_provider)
+    inventory_check_repository = providers.Factory(InventoryCheckRepository, db_session=db_session_provider)
+
+    # Sale & Finance
+    customer_repository = providers.Factory(CustomerRepository, db_session=db_session_provider)
+    
+    order_repository = providers.Factory(
+        OrderRepository, 
+        db_session=db_session_provider # Đã sửa từ 'session' thành 'db_session'
+    )
+    
+    order_detail_repository = providers.Factory(OrderDetailRepository, db_session=db_session_provider)
+    payment_repository = providers.Factory(PaymentRepository, db_session=db_session_provider)
+    debt_repository = providers.Factory(DebtRepository, db_session=db_session_provider)
+    return_order_repository = providers.Factory(ReturnOrderRepository, db_session=db_session_provider)
+    expense_repository = providers.Factory(ExpenseRepository, db_session=db_session_provider)
+    account_report_repository = providers.Factory(AccountReportRepository, db_session=db_session_provider)
+
+    # AI & Todo
+    ai_assistant_repository = providers.Factory(AIAssistantRepository, db_session=db_session_provider)
+    ai_draft_order_repository = providers.Factory(AIDraftOrderRepository, db_session=db_session_provider)
     # ==========================================================
     # 4. REGISTER SERVICES
     # ==========================================================
