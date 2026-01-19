@@ -1,15 +1,17 @@
 from infrastructure.models.access_and_identity.administrator_model import AdministratorModel
+from domain.models.administrator import Administrator
 from infrastructure.databases.mssql import session
 
 class AdministratorRepository:
     def __init__(self, db_session=session):
         self.session = db_session
 
-    def add(self, name, permission, hashed_password): # Thêm hashed_password
+    def add(self, admin: Administrator): # SỬA: Nhận đối tượng Domain thay vì tham số rời
         db_admin = AdministratorModel(
-            admin_name=name, 
-            admin_permission=permission,
-            password=hashed_password # Lưu mật khẩu vào DB
+            admin_name=admin.admin_name, 
+            email=admin.email,           # BỔ SUNG: Email
+            admin_permission=admin.admin_permission,
+            password=admin.password      # Lưu mật khẩu từ domain object
         )
         try:
             self.session.add(db_admin)
@@ -17,8 +19,12 @@ class AdministratorRepository:
             self.session.refresh(db_admin)
             return db_admin
         except Exception as e:
-            self.session.rollback() # Cần thiết để tránh lỗi "transaction rolled back"
+            self.session.rollback() 
             raise e
+
+    def get_by_email(self, email: str):
+        """Tìm Admin theo email"""
+        return self.session.query(AdministratorModel).filter_by(email=email).first()
 
     def get_all(self):
         return self.session.query(AdministratorModel).all()

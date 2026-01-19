@@ -6,6 +6,7 @@ from dependency_container import Container
 admin_bp = Blueprint('admin_bp', __name__)
 
 @admin_bp.route('/', methods=['POST'])
+@token_required # BỔ SUNG: Bảo mật cho API tạo admin
 @inject
 def create(admin_service = Provide[Container.administrator_service]):
     """

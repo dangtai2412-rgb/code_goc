@@ -5,12 +5,17 @@ class SupplierRepository:
     def __init__(self, db_session=session):
         self.session = db_session
 
-    def add(self, supplier_model):
+    def add(self, sup): # Nhận đối tượng Domain
+        db_supplier = SupplierModel(
+            supplier_name=sup.supplier_name,
+            contact_info=sup.contact_info,
+            owner_id=sup.owner_id
+        )
         try:
-            self.session.add(supplier_model)
+            self.session.add(db_supplier)
             self.session.commit()
-            self.session.refresh(supplier_model)
-            return supplier_model
+            self.session.refresh(db_supplier)
+            return db_supplier
         except Exception as e:
             self.session.rollback()
             raise e

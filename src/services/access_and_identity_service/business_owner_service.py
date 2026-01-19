@@ -1,23 +1,30 @@
 from werkzeug.security import generate_password_hash
-from infrastructure.models.access_and_identity.business_owner_model import BusinessOwnerModel
+from domain.models.business_owner import BusinessOwner # SỬA: Dùng Domain thay vì Model
 
 class BusinessOwnerService:
     def __init__(self, repository):
         self.repo = repository
 
     def create_owner(self, data):
-        # Validate cơ bản
+        # 1. Validate và kiểm tra tồn tại
         if not data.get('email') or not data.get('password'):
             raise ValueError("Email và Password là bắt buộc")
+            
+        if self.repo.get_by_email(data['email']):
+            raise Exception("Email chủ cửa hàng đã tồn tại")
 
-        # Tự động gán Plan ID = 1 (Gói dùng thử) nếu không chọn
+        # 2. Xử lý logic nghiệp vụ (Gói cước mặc định)
         plan_id = data.get('plan_id', 1)
 
-        new_owner = BusinessOwnerModel(
+        # 3. Mã hóa mật khẩu
+        hashed_pw = generate_password_hash(data.get('password'))
+
+        # 4. Tạo Domain Object (Thay vì BusinessOwnerModel)
+        new_owner = BusinessOwner(
             owner_name=data.get('owner_name'),
             phone_number=data.get('phone_number'),
             email=data.get('email'),
-            password=generate_password_hash(data.get('password')),
+            password=hashed_pw,
             account_status='Active',
             plan_id=plan_id,
             admin_id=None

@@ -11,9 +11,10 @@ class EmployeeRepository:
             db_emp = EmployeeModel(
                 employee_name=emp.employee_name,
                 owner_id=emp.owner_id,
+                email=emp.email,          # SỬA LỖI: Bổ sung trường email bắt buộc
                 role=emp.role,
                 active_status=emp.active_status,
-                password=emp.password # BỔ SUNG: Lưu mật khẩu vào DB
+                password=emp.password 
             )
             self.session.add(db_emp)
             self.session.commit()
@@ -23,6 +24,10 @@ class EmployeeRepository:
             self.session.rollback()
             raise e
 
+    def get_by_email(self, email: str):
+        """Tìm nhân viên theo email để Login (chính xác hơn tên)"""
+        return self.session.query(EmployeeModel).filter_by(email=email).first()
+
     def get_all(self):
         return self.session.query(EmployeeModel).all()
 
@@ -30,5 +35,5 @@ class EmployeeRepository:
         return self.session.query(EmployeeModel).filter_by(owner_id=owner_id).all()
 
     def get_by_name(self, name: str):
-        """Tìm nhân viên theo tên để phục vụ Login"""
+        """Giữ nguyên để tìm theo tên nếu cần"""
         return self.session.query(EmployeeModel).filter_by(employee_name=name).first()

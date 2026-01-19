@@ -1,29 +1,25 @@
+from werkzeug.security import generate_password_hash
 from domain.models.employee import Employee
-from werkzeug.security import generate_password_hash # Dùng để mã hóa mật khẩu
 
 class EmployeeService:
-    def __init__(self, repository):
-        self.repository = repository
+    def __init__(self, employee_repo):
+        self.employee_repo = employee_repo
 
     def create_employee(self, data):
-        name = data.get('employee_name')
-        if not name:
-            raise ValueError("Tên nhân viên không được để trống")
+        # Kiểm tra email tồn tại
+        if self.employee_repo.get_by_email(data['email']):
+            raise Exception("Email đã tồn tại")
 
-        # 1. Mã hóa mật khẩu nhân viên
-        raw_password = data.get('password', '123456') # Mặc định 123456 nếu trống
-        hashed_password = generate_password_hash(raw_password)
+        # Mã hóa mật khẩu
+        hashed_pw = generate_password_hash(data['password'])
 
-        # 2. Đóng gói vào đối tượng Domain
-        emp_domain = Employee(
-            employee_name=name,
-            owner_id=data.get('owner_id'),
-            role=data.get('role', 'Staff'),
-            active_status=data.get('active_status', True)
+        # Tạo Domain Object
+        new_emp = Employee(
+            employee_name=data['employee_name'],
+            owner_id=data['owner_id'],
+            email=data['email'],
+            password=hashed_pw, # Lưu mật khẩu đã mã hóa
+            role=data.get('role'),
+            active_status=True
         )
-        emp_domain.password = hashed_password # Gán mật khẩu đã mã hóa
-
-        return self.repository.add(emp_domain)
-
-    def get_employees_by_owner(self, owner_id):
-        return self.repository.get_by_owner(owner_id)
+        return self.employee_repo.add(new_emp)

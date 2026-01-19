@@ -1,44 +1,44 @@
 from infrastructure.models.inventory.stock_import_model import StockImportModel
 from infrastructure.models.inventory.stock_import_detail_model import StockImportDetailModel
-from datetime import datetime
 
 class StockImportService:
-    def __init__(self, repository):
-        self.repository = repository
+    def __init__(self, import_repo, detail_repo, product_repo):
+        self.import_repo = import_repo
+        self.detail_repo = detail_repo
+        self.product_repo = product_repo
 
-    def create_stock_import(self, data, owner_id):
-        # 1. Tạo Header cho phiếu nhập
-        new_import = StockImportModel(
-            owner_id=owner_id,
-            supplier_id=data['supplier_id'],
-            import_date=datetime.now(),
-            total_amount=0
-        )
+    def create_import_ticket(self, data, owner_id):
+        try:
+            # 1. Tạo Header cho phiếu nhập
+            new_import = StockImportModel(
+                owner_id=owner_id,
+                supplier_id=data.get('supplier_id'),
+                total_amount=data.get('total_amount', 0),
+                import_date=data.get('import_date')
+            )
+            self.import_repo.add(new_import)
 
-        details = []
-        final_total = 0
-
-        # 2. Xử lý danh sách sản phẩm nhập về
-        if 'items' in data:
-            for item in data['items']:
-                qty = int(item['quantity'])
-                price = float(item['unit_price'])
-                line_total = qty * price
-                
+            # 2. Duyệt qua danh sách hàng nhập
+            for item in data.get('details', []):
+                # Lưu chi tiết dòng hàng
                 detail = StockImportDetailModel(
+                    import_id=new_import.import_id,
                     product_id=item['product_id'],
-                    quantity=qty,
-                    unit_price=price,
-                    line_total=line_total
+                    quantity=item['quantity'],
+                    import_price=item['import_price']
                 )
-                details.append(detail)
-                final_total += line_total
+                self.detail_repo.add(detail)
 
-        # 3. Gán danh sách và tổng tiền
-        new_import.details = details
-        new_import.total_amount = final_total
-
-        return self.repository.add_import_with_details(new_import)
-    def get_history_by_owner(self, owner_id):
-        # Repository cần có hàm get_by_owner
-        return self.repository.get_by_owner(owner_id)
+                # CẬP NHẬT KHO: Lấy sản phẩm lên và tăng số lượng
+                product = self.product_repo.get_by_id(item['product_id'])
+                if product:
+                    product.stock_quantity = (product.stock_quantity or 0) + item['quantity']
+                    # Không cần gọi update repo vì SQLAlchemy tự theo dõi sự thay đổi trong session
+            
+            # 3. Kết thúc Transaction: Lưu tất cả vào DB cùng lúc
+            self.import_repo.session.commit() 
+            return new_import
+            
+        except Exception as e:
+            self.import_repo.session.rollback()
+            raise e

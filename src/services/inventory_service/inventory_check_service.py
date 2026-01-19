@@ -1,59 +1,51 @@
-from datetime import datetime
 from infrastructure.models.inventory.inventory_check_model import InventoryCheckModel
 from infrastructure.models.inventory.inventory_check_detail_model import InventoryCheckDetailModel
 
 class InventoryCheckService:
-    # 👇 Inject product_repository để update lại kho
-    def __init__(self, repository, product_repository):
-        self.repo = repository
-        self.product_repo = product_repository
+    def __init__(self, check_repo, product_repo):
+        self.check_repo = check_repo
+        self.product_repo = product_repo
 
-    def create_check(self, data, owner_id):
-        # 1. Tạo phiếu kiểm header
-        new_check = InventoryCheckModel(
-            owner_id=owner_id,
-            note=data.get('note', ''),
-            check_date=datetime.now(),
-            status='Completed' 
-        )
-        self.repo.session.add(new_check)
-        self.repo.session.flush() # Lấy ID
-
-        # 2. Xử lý chi tiết & CẬP NHẬT KHO
-        items = data.get('details', [])
-        for item in items:
-            product_id = item['product_id']
-            actual_qty = int(item['actual_quantity'])
-
-            # Lấy sản phẩm hiện tại để xem tồn kho hệ thống
-            product = self.product_repo.get_by_id(product_id)
-            if not product:
-                continue # Bỏ qua nếu ID sai
-
-            system_qty = product.stock_quantity
-            variance = actual_qty - system_qty
-
-            # Tạo detail
-            detail = InventoryCheckDetailModel(
-                check_id=new_check.check_id,
-                product_id=product_id,
-                system_quantity=system_qty,
-                actual_quantity=actual_qty,
-                variance=variance,
-                reason=item.get('reason', '')
+    def perform_inventory_check(self, owner_id, data):
+        """
+        Logic cân bằng kho:
+        1. Tạo phiếu kiểm kho
+        2. Với mỗi sản phẩm: Lưu chi tiết & Cập nhật lại stock_quantity thực tế
+        3. Commit một lần duy nhất
+        """
+        try:
+            # 1. Tạo Header phiếu kiểm
+            new_check = InventoryCheckModel(
+                owner_id=owner_id,
+                check_date=data.get('check_date'),
+                notes=data.get('notes')
             )
-            self.repo.session.add(detail)
+            self.check_repo.add(new_check)
 
-            # 🔥 UPDATE LẠI KHO THEO SỐ THỰC TẾ
-            product.stock_quantity = actual_qty
-            # (Product đã được attach vào session nên không cần gọi repo.update explicit, commit là tự lưu)
+            # 2. Xử lý từng sản phẩm trong danh sách kiểm
+            for item in data.get('details', []):
+                product_id = item['product_id']
+                actual_qty = item['actual_quantity'] # Số lượng thực tế đếm được
 
-        # 3. Lưu tất cả thay đổi
-        self.repo.commit()
-        return new_check
+                # Lưu chi tiết phiếu kiểm
+                detail = InventoryCheckDetailModel(
+                    check_id=new_check.check_id,
+                    product_id=product_id,
+                    expected_quantity=item['expected_quantity'], # Số lượng trên máy
+                    actual_quantity=actual_qty
+                )
+                # Giả sử bạn có detail_repo hoặc lưu trực tiếp qua session
+                self.check_repo.session.add(detail)
 
-    def get_history(self, owner_id):
-        return self.repo.get_all(owner_id)
+                # CẬP NHẬT KHO: Đưa tồn kho thực tế về đúng số lượng đếm được
+                product = self.product_repo.get_by_id(product_id)
+                if product:
+                    product.stock_quantity = actual_qty
+            
+            # 3. CHỐT GIAO DỊCH: Lưu tất cả thay đổi
+            self.check_repo.commit()
+            return new_check
 
-    def get_detail(self, check_id):
-        return self.repo.get_by_id(check_id)
+        except Exception as e:
+            self.check_repo.session.rollback()
+            raise e

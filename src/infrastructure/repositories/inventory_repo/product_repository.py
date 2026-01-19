@@ -18,6 +18,7 @@ class ProductRepository:
                 owner_id=prod.owner_id,
                 selling_price=prod.selling_price,
                 stock_quantity=prod.stock_quantity
+                
             )
             self.session.add(db_prod)
             self.session.commit()

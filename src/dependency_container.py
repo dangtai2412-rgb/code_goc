@@ -1,6 +1,6 @@
 from dependency_injector import containers, providers
 from infrastructure.databases import session 
-
+from config import Config
 # ==========================================================
 # 1. IMPORT REPOSITORIES
 # ==========================================================
@@ -115,9 +115,15 @@ class Container(containers.DeclarativeContainer):
     # ==========================================================
     
     # Auth & Identity
-    admin_repository = providers.Factory(AdministratorRepository, session=db_session)
+    administrator_repository = providers.Factory(
+        AdministratorRepository,
+        db_session=session  # SỬA: 'session' thành 'db_session'
+    )
     business_owner_repository = providers.Factory(BusinessOwnerRepository, session=db_session)
-    employee_repository = providers.Factory(EmployeeRepository, session=db_session)
+    employee_repository = providers.Factory(
+        EmployeeRepository,
+        db_session=session  # SỬA: 'session' thành 'db_session'
+    )
     subscription_plan_repository = providers.Factory(SubscriptionPlanRepository, session=db_session)
 
     # Inventory
@@ -151,9 +157,10 @@ class Container(containers.DeclarativeContainer):
     # --- 1. CORE SERVICES (Độc lập) ---
     auth_service = providers.Factory(
         AuthService,
-        admin_repo=admin_repository,
-        business_owner_repo=business_owner_repository,
-        employee_repo=employee_repository
+        admin_repo=administrator_repository,
+        owner_repo=business_owner_repository,
+        employee_repo=employee_repository,
+        secret_key=Config.SECRET_KEY # Truyền key từ file config vào đây
     )
 
     administrator_service = providers.Factory(AdministratorService, repository=admin_repository)
