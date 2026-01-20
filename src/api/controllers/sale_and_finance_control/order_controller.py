@@ -46,10 +46,10 @@ def post_order(current_user, order_service: OrderService = Provide[Container.ord
         data['owner_id'] = token_owner_id
         
         # 2. Lấy ID người trực tiếp tạo đơn
-        creator_id = current_user.get('user_id')
-        
-        result = order_service.create_order(data, creator_id)
-        
+        user_id = current_user.get('user_id')
+
+        result = order_service.create_order(data, user_id)
+
         return jsonify({
             "message": "Tạo đơn hàng thành công", 
             "order_id": result.order_id
