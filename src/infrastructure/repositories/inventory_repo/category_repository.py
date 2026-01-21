@@ -3,17 +3,23 @@ from infrastructure.models.inventory.category_model import CategoryModel
 # from domain.models.category import Category 
 
 class CategoryRepository:
-    def __init__(self, session):
-        self.session = session
+    def __init__(self, db_session):
+        self.db_session = db_session
 
-    def add(self, cat): # Nhận đối tượng Domain thay vì tham số rời
-        new_category = CategoryModel(
-            category_name=cat.category_name,
-            description=cat.description,
-            owner_id=cat.owner_id
-        )
-        self.session.add(new_category)
-        self.session.commit()
-        return new_category
+    def add(self, category_name, description, owner_id):
+        try:
+            new_category = CategoryModel(
+                category_name=category_name,
+                description=description,
+                owner_id=owner_id
+            )
+            self.db_session.add(new_category)
+            self.db_session.commit()
+            self.db_session.refresh(new_category)
+            return new_category
+        except Exception as e:
+            self.db_session.rollback()
+            raise e
+
     def get_all_by_owner(self, owner_id):
         return self.session.query(CategoryModel).filter_by(owner_id=owner_id).all()

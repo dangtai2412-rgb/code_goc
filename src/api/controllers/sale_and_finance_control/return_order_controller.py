@@ -1,3 +1,4 @@
+# src/api/controllers/sale_and_finance_control/return_order_controller.py
 from flask import Blueprint, jsonify, request
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
@@ -9,7 +10,7 @@ return_order_bp = Blueprint('return_order_bp', __name__)
 @return_order_bp.route('/', methods=['POST'])
 @token_required
 @inject
-def create_return_order(current_user, service: ReturnOrderService = Provide[Container.return_order_service]):
+def create_return_order(service: ReturnOrderService = Provide[Container.return_order_service]):
     """
     Tạo phiếu trả hàng và hoàn tồn kho
     ---
@@ -36,9 +37,13 @@ def create_return_order(current_user, service: ReturnOrderService = Provide[Cont
         description: Trả hàng thành công
     """
     try:
-        owner_id = getattr(current_user, 'owner_id', None)
-        data = request.json
+        # FIXED: Lấy thông tin user từ Dictionary gắn trong request
+        user_info = getattr(request, 'current_user', {})
         
+        # Lấy owner_id (Nếu là nhân viên thì lấy owner_id, nếu là chủ thì lấy user_id)
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
+        data = request.json
         result = service.create_return(data, owner_id)
         
         return jsonify({

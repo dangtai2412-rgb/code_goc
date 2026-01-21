@@ -1,14 +1,17 @@
+# src/api/controllers/sale_and_finance_control/debt_controller.py
 from flask import Blueprint, request, jsonify
 from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
-from services.sale_and_finance_service.debt_service import DebtService
+from services.sale_and_finance_service.debt_service import DebtService # Bạn đã import cái này
+
 debt_bp = Blueprint('debt_bp', __name__)
 
 @debt_bp.route('/', methods=['POST'])
 @token_required
 @inject
-def create_customer_debt(current_user, debt_service: DebtService = Provide[Container.debt_service]):
+# SỬA TẠI ĐÂY: Thay 'OrderService' bằng 'DebtService'
+def create_customer_debt(debt_service: DebtService = Provide[Container.debt_service]):
     """
     Ghi nhận công nợ mới
     ---
@@ -27,6 +30,7 @@ def create_customer_debt(current_user, debt_service: DebtService = Provide[Conta
     """
     try:
         data = request.get_json()
+        
         result = debt_service.create_debt_from_order(
             data.get('order_id'), 
             data.get('customer_id'), 

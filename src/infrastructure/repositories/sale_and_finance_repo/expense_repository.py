@@ -2,8 +2,8 @@ from infrastructure.models.sale_and_finance.expense_model import ExpenseModel
 from domain.models.expense import Expense
 
 class ExpenseRepository:
-    def __init__(self, session):
-        self.session = session
+    def __init__(self, db_session):
+        self.session = db_session
 
     def add(self, exp: Expense): # SỬA: Nhận Domain Object
         db_expense = ExpenseModel(

@@ -11,7 +11,7 @@ product_bp = Blueprint('product_bp', __name__)
 @product_bp.route('/', methods=['POST'])
 @token_required
 @inject
-def create_new_product(current_user, product_service = Provide[Container.product_service]):
+def create_new_product(product_service = Provide[Container.product_service]):
     """
     Thêm sản phẩm mới
     ---
@@ -31,16 +31,21 @@ def create_new_product(current_user, product_service = Provide[Container.product
     """
     try:
         data = request.get_json()
-        data['owner_id'] = getattr(request, 'current_user_id', None)
+        
+        # Lấy thông tin từ request object
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        data['owner_id'] = owner_id
+        
         product = product_service.create_product(data)
-        return jsonify({"message": "Success", "product_id": product.product_id}), 201
+        return jsonify({"message": "Thành công", "id": product.product_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 @product_bp.route('/', methods=['GET'])
 @token_required
 @inject
-def list_products_by_owner(current_user, product_service = Provide[Container.product_service]):
+def list_products_by_owner(product_service = Provide[Container.product_service]):
     """
     Lấy danh sách sản phẩm
     ---
@@ -50,7 +55,9 @@ def list_products_by_owner(current_user, product_service = Provide[Container.pro
       200: {description: "Thành công"}
     """
     try:
-        owner_id = getattr(request, 'current_user_id', None)
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
         products = product_service.get_products_by_owner(owner_id)
         result = [{"id": p.product_id, "name": p.product_name, "price": p.selling_price} for p in products]
         return jsonify(result), 200
@@ -60,11 +67,11 @@ def list_products_by_owner(current_user, product_service = Provide[Container.pro
 @product_bp.route('/<int:product_id>', methods=['PUT'])
 @token_required
 @inject
-def update_product(current_user, product_id, product_service = Provide[Container.product_service]): # Thêm current_user
+def update_product(product_id, product_service = Provide[Container.product_service]): # Thêm current_user
     """Cập nhật thông tin sản phẩm"""
     try:
         data = request.get_json()
-        result = product_service.update_product(product_id, data)
+        product_service.update_product(product_id, data)
         return jsonify({"message": "Updated"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -72,7 +79,7 @@ def update_product(current_user, product_id, product_service = Provide[Container
 @product_bp.route('/<int:product_id>', methods=['DELETE'])
 @token_required
 @inject
-def delete_product(current_user, product_id, product_service = Provide[Container.product_service]): # Thêm current_user
+def delete_product(product_id, product_service = Provide[Container.product_service]): # Thêm current_user
     """Xóa sản phẩm"""
     try:
         product_service.delete_product(product_id)

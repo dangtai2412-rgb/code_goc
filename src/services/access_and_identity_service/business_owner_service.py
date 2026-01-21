@@ -30,3 +30,6 @@ class BusinessOwnerService:
             admin_id=None
         )
         return self.repo.add(new_owner)
+    def list_all_owners(self):
+        """Lấy danh sách tất cả chủ cửa hàng"""
+        return self.repo.get_all()

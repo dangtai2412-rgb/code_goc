@@ -9,7 +9,7 @@ category_bp = Blueprint('category_bp', __name__)
 @category_bp.route('/', methods=['POST'])
 @token_required
 @inject
-def create_category(current_user, service: CategoryService = Provide[Container.category_service]):
+def create_category( service: CategoryService = Provide[Container.category_service]):
     """
     Tạo danh mục sản phẩm mới
     ---
@@ -29,9 +29,10 @@ def create_category(current_user, service: CategoryService = Provide[Container.c
         description: Lỗi dữ liệu đầu vào
     """
     try:
-        owner_id = getattr(current_user, 'owner_id', None)
-        data = request.json
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
         
+        data = request.json
         new_cate = service.create_category(data, owner_id)
         
         return jsonify({
@@ -45,7 +46,7 @@ def create_category(current_user, service: CategoryService = Provide[Container.c
 @category_bp.route('/', methods=['GET'])
 @token_required
 @inject
-def list_categories(current_user, service: CategoryService = Provide[Container.category_service]):
+def list_categories(service: CategoryService = Provide[Container.category_service]):
     """
     Lấy danh sách tất cả danh mục của cửa hàng
     ---
@@ -58,13 +59,10 @@ def list_categories(current_user, service: CategoryService = Provide[Container.c
         description: Lỗi hệ thống
     """
     try:
-        owner_id = getattr(current_user, 'owner_id', None)
-        categories = service.get_categories(owner_id)
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
         
-        return jsonify([{
-            "category_id": c.category_id,
-            "category_name": c.category_name,
-            "description": c.description
-        } for c in categories]), 200
+        categories = service.get_categories(owner_id)
+        return jsonify([{"id": c.category_id, "name": c.category_name} for c in categories]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

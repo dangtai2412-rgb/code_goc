@@ -22,11 +22,10 @@ class SupplierRepository:
 
     def get_all_by_owner(self, owner_id):
         return self.session.query(SupplierModel).filter_by(owner_id=owner_id).all()
-
     def get_by_id(self, supplier_id, owner_id):
         return self.session.query(SupplierModel).filter_by(supplier_id=supplier_id, owner_id=owner_id).first()
 
-    def update(self):
+    def update(self, supplier_model):
         try:
             self.session.commit()
         except Exception as e:

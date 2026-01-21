@@ -15,7 +15,7 @@ class AIDraftOrderService:
         if not api_key:
             raise ValueError("Missing GEMINI_API_KEY in Config. Please check your .env file.")
             
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=Config.GEMINI_API_KEY)
         self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     def create_draft_from_voice(self, voice_text, employee_id):

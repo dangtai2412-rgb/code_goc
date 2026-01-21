@@ -2,8 +2,8 @@ from infrastructure.models.inventory.inventory_check_model import InventoryCheck
 from sqlalchemy.orm import joinedload
 
 class InventoryCheckRepository:
-    def __init__(self, session):
-        self.session = session
+    def __init__(self, db_session):
+        self.session = db_session
 
     def add(self, inventory_check):
         self.session.add(inventory_check)

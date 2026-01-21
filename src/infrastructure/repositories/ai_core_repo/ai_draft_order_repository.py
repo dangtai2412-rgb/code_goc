@@ -16,12 +16,12 @@ class AIDraftOrderRepository:
                 confirmation_status=draft.confirmation_status,
                 source=draft.source
             )
-            self.session.add(db_draft)
-            self.session.commit()
-            self.session.refresh(db_draft)
+            self.db_session.add(db_draft)
+            self.db_session.commit()
+            self.db_session.refresh(db_draft)
             return db_draft
         except Exception as e:
-            self.session.rollback()
+            self.db_session.rollback()
             raise e
         
     def create_draft(self, raw_text, extracted_json):
@@ -43,7 +43,6 @@ class AIDraftOrderRepository:
 
     def get_by_id(self, draft_id):
         return self.session.query(AIDraftOrderModel).filter_by(draft_id=draft_id).first()
-
     def update_status(self, draft_id, status):
         draft = self.get_by_id(draft_id)
         if draft:

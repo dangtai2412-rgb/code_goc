@@ -48,3 +48,14 @@ class AccountReportService:
         """Tổng hợp doanh thu, chi phí trong ngày"""
         # Logic gọi repo để tính toán từ bảng Orders và StockImports
         return self.repository.get_report_by_date(owner_id, report_date)
+    def get_dashboard_stats(self, owner_id):
+        return self.repository.get_dashboard_stats(owner_id)
+
+    def get_revenue_chart(self, owner_id):
+        return self.repository.get_revenue_chart(owner_id)
+
+    def get_top_products(self, owner_id):
+        return self.repository.get_top_products(owner_id)
+
+    def generate_daily_report(self, owner_id, report_date):
+        return self.repository.get_report_by_date(owner_id, report_date)

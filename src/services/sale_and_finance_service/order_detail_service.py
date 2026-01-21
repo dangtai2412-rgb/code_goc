@@ -11,3 +11,5 @@ class OrderDetailService:
         if quantity <= 0:
             raise ValueError("Số lượng phải lớn hơn 0")
         return quantity * unit_price
+    def create_detail(self, data): # Bổ sung hàm tạo chi tiết
+        return self.repository.add(data)

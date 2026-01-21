@@ -37,34 +37,51 @@ def create_new_unit(unit_service = Provide[Container.unit_service]):
     """
     try:
         data = request.get_json()
-        result = unit_service.create_unit(data)
+        
+        # Lấy owner_id từ Token
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
+        # Gọi hàm create_unit (đã sửa tên trong Service)
+        result = unit_service.create_unit(data, owner_id)
+        
         return jsonify({"message": "Tạo đơn vị thành công", "id": result.unit_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+# src/api/controllers/inventory_control/unit_controller.py
 @unit_bp.route('/product/<int:product_id>', methods=['GET'])
 @token_required
 @inject
 def list_units_by_product(product_id, unit_service = Provide[Container.unit_service]):
     """
     Lấy danh sách đơn vị tính theo ID sản phẩm
-    ---
-    tags: [Inventory]
-    security: [{BearerAuth: []}]
-    parameters:
-      - name: product_id
-        in: path
-        type: integer
-        required: true
-        description: ID của sản phẩm cần lấy đơn vị tính
-    responses:
-      200:
-        description: Danh sách đơn vị tính của sản phẩm
-      500:
-        description: Lỗi hệ thống
     """
     try:
+        # Gọi hàm trong service
         units = unit_service.get_units_by_product(product_id)
+        
+        return jsonify([
+            {
+                "id": u.unit_id, 
+                "name": u.unit_name,
+                "conversion_rate": u.conversion_rate,
+                "is_base": u.is_base_unit
+            } for u in units
+        ]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@unit_bp.route('/', methods=['GET'])
+@token_required
+@inject
+def list_units(unit_service = Provide[Container.unit_service]):
+    """Lấy danh sách đơn vị tính của cửa hàng"""
+    try:
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
+        units = unit_service.get_units(owner_id)
         return jsonify([{"id": u.unit_id, "name": u.unit_name} for u in units]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

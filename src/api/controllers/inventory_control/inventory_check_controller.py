@@ -22,7 +22,9 @@ def create_check(current_user, service: InventoryCheckService = Provide[Containe
     }
     """
     try:
-        owner_id = getattr(current_user, 'owner_id', None)
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
         data = request.json
         new_check = service.create_check(data, owner_id)
         
@@ -47,14 +49,14 @@ def get_history(current_user, service: InventoryCheckService = Provide[Container
         description: Danh sách các phiếu kiểm
     """
     try:
-        owner_id = getattr(current_user, 'owner_id', None)
-        checks = service.get_history(owner_id)
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
         
-        # Serialize dữ liệu trả về
+        checks = service.get_history(owner_id)
         result = []
         for c in checks:
             result.append({
-                "check_id": c.check_id,
+                "id": c.check_id,
                 "date": c.check_date.strftime("%d/%m/%Y %H:%M"),
                 "note": c.note,
                 "status": c.status
@@ -96,10 +98,6 @@ def get_check_detail(check_id, current_user, service: InventoryCheckService = Pr
             "reason": d.reason
         } for d in check.details]
         
-        return jsonify({
-            "check_id": check.check_id,
-            "note": check.note,
-            "details": details
-        }), 200
+        return jsonify({"id": check.check_id, "note": check.note}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

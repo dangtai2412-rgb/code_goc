@@ -5,20 +5,20 @@ class CustomerRepository:
     def __init__(self, db_session=session):
         self.session = db_session
 
-    def add(self, cust: Customer): # NHẬN ĐỐI TƯỢNG DOMAIN
+    def add(self, customer_name, phone_number, address, owner_id): # Khớp với Service call
         db_cust = CustomerModel(
-            customer_name=cust.customer_name, 
-            phone_number=cust.phone_number, 
-            address=cust.address,
-            owner_id=cust.owner_id
+            customer_name=customer_name, 
+            phone_number=phone_number, 
+            address=address,
+            owner_id=owner_id
         )
         try:
-            self.session.add(db_cust)
-            self.session.commit()
-            self.session.refresh(db_cust)
+            self.db_session.add(db_cust)
+            self.db_session.commit()
+            self.db_session.refresh(db_cust)
             return db_cust
         except Exception as e:
-            self.session.rollback()
+            self.db_session.rollback()
             raise e
         
 

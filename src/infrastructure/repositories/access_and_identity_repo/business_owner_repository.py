@@ -5,8 +5,8 @@ from domain.models.business_owner import BusinessOwner
 from infrastructure.databases.mssql import session
 
 class BusinessOwnerRepository:
-    def __init__(self, session: Session = session):
-        self.session = session
+    def __init__(self, db_session: Session = session):
+        self.session = db_session
 
     def add(self, owner: BusinessOwner) -> BusinessOwnerModel:
         try:
