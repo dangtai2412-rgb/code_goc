@@ -11,10 +11,18 @@ supplier_bp = Blueprint('supplier_bp', __name__)
 @inject
 def add_supplier(supplier_service = Provide[Container.supplier_service]):
     """
-    Thêm nhà cung cấp
+    Thêm nhà cung cấp mới
     ---
     tags: [Suppliers]
     security: [{BearerAuth: []}]
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            supplier_name: {type: string, example: "Vật liệu Xây dựng Toàn Cầu"}
+            phone_number: {type: string, example: "0912345678"}
     """
     try:
         data = request.get_json()
