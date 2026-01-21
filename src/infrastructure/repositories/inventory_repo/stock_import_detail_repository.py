@@ -1,3 +1,4 @@
+# src/infrastructure/repositories/inventory_repo/stock_import_detail_repository.py
 from infrastructure.models.inventory.stock_import_detail_model import StockImportDetailModel
 from infrastructure.databases.mssql import session
 
@@ -6,9 +7,11 @@ class StockImportDetailRepository:
         self.session = db_session
 
     def add(self, detail_model):
-        """Chỉ lưu chi tiết dòng hàng"""
+        """Lưu chi tiết dòng hàng vào Database"""
         try:
             self.session.add(detail_model)
+            self.session.commit() # FIXED: Added commit
+            self.session.refresh(detail_model) # FIXED: Refresh to get the new ID
             return detail_model
         except Exception as e:
             self.session.rollback()

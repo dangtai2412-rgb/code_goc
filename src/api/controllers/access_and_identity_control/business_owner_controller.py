@@ -53,9 +53,7 @@ def register_new_owner(owner_service = Provide[Container.business_owner_service]
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@business_owner_bp.route('/', methods=['GET'])
-@token_required
-@inject
+
 @business_owner_bp.route('/', methods=['GET'])
 @token_required
 @inject
