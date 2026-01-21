@@ -22,7 +22,7 @@ class OrderService:
             )
             # Chỉ add vào session, chưa commit
             self.repo.add(new_order)
-
+            self.repo.session.flush()
             # 2. Xử lý chi tiết đơn hàng & TRỪ KHO
             details = data.get('details', [])
             for item in details:

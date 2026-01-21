@@ -6,39 +6,29 @@ from dependency_container import Container
 admin_bp = Blueprint('admin_bp', __name__)
 
 @admin_bp.route('/', methods=['POST'])
-@token_required # BỔ SUNG: Bảo mật cho API tạo admin
+@token_required 
 @inject
+# REMOVED: current_user (Access via request.current_user_id instead)
 def create(admin_service = Provide[Container.administrator_service]):
     """
     Tạo tài khoản Administrator mới (Super Admin)
     ---
-    tags:
-      - Administrator
+    tags: [Administrator]
+    security: [{BearerAuth: []}]  # ADDED: Essential for Swagger to send the token
     parameters:
       - in: body
         name: body
         required: true
         schema:
           type: object
-          required:
-            - admin_name
-            - email
-            - password
+          required: [admin_name, email, password]
           properties:
-            admin_name:
-              type: string
-              example: "Super Admin"
-            email:
-              type: string
-              example: "admin@system.com"
-            password:
-              type: string
-              example: "admin123"
+            admin_name: {type: string, example: "Super Admin"}
+            email: {type: string, example: "admin@system.com"}
+            password: {type: string, example: "admin123"}
     responses:
-      201:
-        description: Tạo thành công
-      400:
-        description: Lỗi dữ liệu
+      201: {description: "Tạo thành công"}
+      400: {description: "Lỗi dữ liệu"}
     """
     try:
         data = request.get_json()
@@ -50,19 +40,20 @@ def create(admin_service = Provide[Container.administrator_service]):
 @admin_bp.route('/', methods=['GET'])
 @token_required
 @inject
+# REMOVED: current_user to maintain consistency and prevent 500 errors
 def list_admins(admin_service = Provide[Container.administrator_service]):
     """
-    Lấy danh sách Admin
+    Lấy danh sách admin
     ---
-    tags:
-      - Administrator
-    security:
-      - Bearer: []
+    tags: [Administrator]
+    security: [{BearerAuth: []}]
     responses:
-      200:
-        description: Danh sách Admin
+      200: {description: "Success"}
     """
     try:
+        # Example: You can still get the user ID if needed:
+        # admin_who_requested = request.current_user_id 
+        
         admins = admin_service.get_all_admins()
         return jsonify([{"id": a.admin_id, "name": a.admin_name, "email": a.email} for a in admins]), 200
     except Exception as e:

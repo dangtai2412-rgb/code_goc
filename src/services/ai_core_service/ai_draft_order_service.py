@@ -9,7 +9,13 @@ class AIDraftOrderService:
         self.order_service = order_service
         self.customer_repo = customer_repo
         self.product_repo = product_repo
-        genai.configure(api_key=Config.GEMINI_API_KEY)
+        
+        # Kiểm tra API Key trước khi cấu hình
+        api_key = getattr(Config, 'GEMINI_API_KEY', None)
+        if not api_key:
+            raise ValueError("Missing GEMINI_API_KEY in Config. Please check your .env file.")
+            
+        genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     def create_draft_from_voice(self, voice_text, employee_id):
@@ -18,13 +24,19 @@ class AIDraftOrderService:
             response = self.model.generate_content(prompt)
             match = re.search(r'\{.*\}', response.text, re.DOTALL)
             ai_json = match.group(0) if match else "{}"
+            # Lưu vào repo
             return self.draft_repo.create_draft(employee_id, voice_text, ai_json)
         except Exception as e:
             raise Exception(f"AI Error: {str(e)}")
 
     def confirm_and_create_order(self, draft_id, employee_id):
         draft = self.draft_repo.get_by_id(draft_id)
+        if not draft:
+            raise ValueError("Draft order not found")
+
         ai_data = json.loads(draft.extracted_json)
+        
+        # Tìm khách hàng theo tên trích xuất được
         customer = self.customer_repo.get_by_name(ai_data.get('customer_name'))
         
         order_payload = {
@@ -32,6 +44,8 @@ class AIDraftOrderService:
             "payment_method": ai_data.get('payment_method', 'Cash'),
             "items": []
         }
+
+        # Tìm sản phẩm theo tên trích xuất được
         for item in ai_data.get('items', []):
             product = self.product_repo.get_by_name(item['product_name'])
             if product:
@@ -41,6 +55,11 @@ class AIDraftOrderService:
                     "unit_price": product.base_price,
                     "unit_id": product.unit_id
                 })
+        
+        if not order_payload['items']:
+            raise ValueError("No valid products found in the AI draft")
+
         result = self.order_service.create_order(order_payload, employee_id)
-        if result: self.draft_repo.update_status(draft_id, "Confirmed")
+        if result: 
+            self.draft_repo.update_status(draft_id, "Confirmed")
         return result

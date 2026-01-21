@@ -56,17 +56,17 @@ def register_new_owner(owner_service = Provide[Container.business_owner_service]
 @business_owner_bp.route('/', methods=['GET'])
 @token_required
 @inject
+@business_owner_bp.route('/', methods=['GET'])
+@token_required
+@inject
 def get_all_business_owners(owner_service = Provide[Container.business_owner_service]):
     """
     Lấy danh sách chủ cửa hàng (Admin)
     ---
-    tags:
-      - Business Owner
-    security:
-      - Bearer: []
+    tags: [Business Owner]
+    security: [{BearerAuth: []}]  # FIXED: Match the name 'BearerAuth'
     responses:
-      200:
-        description: Danh sách chủ sở hữu
+      200: {description: "Danh sách chủ sở hữu"}
     """
     try:
         owners = owner_service.list_all_owners() # Đảm bảo Service có hàm này hoặc đổi tên

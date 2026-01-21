@@ -5,6 +5,7 @@ class SubscriptionPlanService:
     def create_plan(self, data):
         # 1. Lấy dữ liệu và kiểm tra logic
         name = data.get('plan_name')
+        description = data.get('description')
         if not name:
             raise ValueError("Tên gói cước không được để trống")
 
@@ -18,10 +19,11 @@ class SubscriptionPlanService:
             
         # 2. Gọi Repository để lưu
         return self.repository.add(
-            name=name, 
-            duration=int(duration), 
-            price=price
-        )
+        name=name, 
+        duration=int(duration), 
+        price=price,
+        description=description # Pass to repository
+    )
 
     def list_plans(self):
         return self.repository.get_all()

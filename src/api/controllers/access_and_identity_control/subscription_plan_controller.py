@@ -15,37 +15,22 @@ def create_new_subscription_plan(plan_service = Provide[Container.subscription_p
     tags:
       - Subscription Plan
     security:
-      - Bearer: []
+      - BearerAuth: []  # <--- FIXED: Match the name in create_app.py
     parameters:
       - in: body
         name: body
         required: true
         schema:
           type: object
-          required:
-            - plan_name
-            - price
-            - duration
+          required: [plan_name, price, duration]
           properties:
-            plan_name:
-              type: string
-              example: "Gói Cơ Bản (Basic)"
-            price:
-              type: number
-              format: float
-              example: 199000
-            duration:
-              type: integer
-              description: Thời hạn gói (ngày)
-              example: 30
-            description:
-              type: string
-              example: "Dành cho cửa hàng nhỏ"
+            plan_name: {type: string, example: "Gói Cơ Bản (Basic)"}
+            price: {type: number, example: 199000}
+            duration: {type: integer, example: 30}
+            description: {type: string, example: "Dành cho cửa hàng nhỏ"}
     responses:
-      201:
-        description: Tạo thành công
-      400:
-        description: Lỗi dữ liệu
+      201: {description: "Tạo thành công"}
+      400: {description: "Lỗi dữ liệu"}
     """
     try:
         data = request.get_json()
@@ -58,7 +43,7 @@ def create_new_subscription_plan(plan_service = Provide[Container.subscription_p
 @inject
 def list_all_plans(plan_service = Provide[Container.subscription_plan_service]):
     """
-    Lấy danh sách các gói cước
+    Lấy danh sách các gói cước (Public - No token required)
     ---
     tags:
       - Subscription Plan
@@ -72,11 +57,9 @@ def list_all_plans(plan_service = Provide[Container.subscription_plan_service]):
             {
                 "id": p.plan_id, 
                 "name": p.plan_name, 
-                "price": float(p.price),
-                "duration": p.duration,
-                "description": p.description
-            } 
-            for p in plans
+                "price": float(p.price) if p.price else 0,
+                "duration": p.duration_days
+            } for p in plans
         ]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

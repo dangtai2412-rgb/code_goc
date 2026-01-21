@@ -14,6 +14,7 @@ class Config:
     """Base configuration."""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'a_default_secret_key'
     DEBUG = os.environ.get('DEBUG', 'False').lower() in ['true', '1']
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
     TESTING = os.environ.get('TESTING', 'False').lower() in ['true', '1']
     DATABASE_URI = os.environ.get('DATABASE_URI') or 'mssql+pymssql://sa:Aa123456@127.0.0.1:1433/FlaskApiDB'
     CORS_HEADERS = 'Content-Type'
@@ -38,7 +39,7 @@ class ProductionConfig(Config):
 template = {
     "swagger": "2.0",
     "info": {
-        "title": "Todo API",
+        "title": "BizFlow API",
         "description": "API for managing todos",
         "version": "1.0.0"
     },

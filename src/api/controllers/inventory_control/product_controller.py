@@ -11,7 +11,7 @@ product_bp = Blueprint('product_bp', __name__)
 @product_bp.route('/', methods=['POST'])
 @token_required
 @inject
-def create_new_product(product_service = Provide[Container.product_service]):
+def create_new_product(current_user, product_service = Provide[Container.product_service]):
     """
     Thêm sản phẩm mới
     ---
@@ -40,7 +40,7 @@ def create_new_product(product_service = Provide[Container.product_service]):
 @product_bp.route('/', methods=['GET'])
 @token_required
 @inject
-def list_products_by_owner(product_service = Provide[Container.product_service]):
+def list_products_by_owner(current_user, product_service = Provide[Container.product_service]):
     """
     Lấy danh sách sản phẩm
     ---
@@ -60,7 +60,7 @@ def list_products_by_owner(product_service = Provide[Container.product_service])
 @product_bp.route('/<int:product_id>', methods=['PUT'])
 @token_required
 @inject
-def update_product(product_id, product_service = Provide[Container.product_service]):
+def update_product(current_user, product_id, product_service = Provide[Container.product_service]): # Thêm current_user
     """Cập nhật thông tin sản phẩm"""
     try:
         data = request.get_json()
@@ -72,7 +72,7 @@ def update_product(product_id, product_service = Provide[Container.product_servi
 @product_bp.route('/<int:product_id>', methods=['DELETE'])
 @token_required
 @inject
-def delete_product(product_id, product_service = Provide[Container.product_service]):
+def delete_product(current_user, product_id, product_service = Provide[Container.product_service]): # Thêm current_user
     """Xóa sản phẩm"""
     try:
         product_service.delete_product(product_id)

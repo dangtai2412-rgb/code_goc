@@ -62,8 +62,8 @@ from services.sale_and_finance_service.return_order_service import ReturnOrderSe
 from services.sale_and_finance_service.expense_service import ExpenseService
 from services.sale_and_finance_service.account_report_service import AccountReportService
 
-from services.ai_sore_service.ai_assistant_service import AIAssistantService
-from services.ai_sore_service.ai_draft_order_service import AIDraftOrderService
+from services.ai_core_service.ai_assistant_service import AIAssistantService
+from services.ai_core_service.ai_draft_order_service import AIDraftOrderService
 
 
 
@@ -116,14 +116,13 @@ class Container(containers.DeclarativeContainer):
     
     subscription_plan_repository = providers.Factory(
         SubscriptionPlanRepository, 
-        session=db_session_provider # Giữ là 'session' nếu repo này dùng tên đó
+        db_session=db_session_provider # Giữ là 'session' nếu repo này dùng tên đó
     )
 
     business_owner_repository = providers.Factory(
         BusinessOwnerRepository,
-        session=db_session_provider # Giữ là 'session' vì BusinessOwnerRepository dùng 'session'
-    )
-
+        db_session=db_session_provider # Ensure this matches the repository's __init__
+)
     administrator_repository = providers.Factory(
         AdministratorRepository,
         db_session=db_session_provider # Dùng 'db_session'
@@ -215,7 +214,11 @@ class Container(containers.DeclarativeContainer):
     )
     
     order_detail_service = providers.Factory(OrderDetailService, repository=order_detail_repository)
-    payment_service = providers.Factory(PaymentService, repository=payment_repository)
+    payment_service = providers.Factory(
+    PaymentService, 
+    payment_repo=payment_repository,
+    debt_repo=debt_repository
+)
     
     # Return Order (Cần product_repo để cộng kho)
     return_order_service = providers.Factory(
@@ -228,12 +231,16 @@ class Container(containers.DeclarativeContainer):
     account_report_service = providers.Factory(AccountReportService, repository=account_report_repository)
 
     # --- 3. AI SERVICES ---
-    ai_assistant_service = providers.Factory(AIAssistantService, repository=ai_assistant_repository)
+    ai_assistant_service = providers.Factory(
+        AIAssistantService, 
+        repository=ai_assistant_repository, 
+        ai_draft_order_repo=ai_draft_order_repository
+    )
     
     ai_draft_order_service = providers.Factory(
-        AIDraftOrderService, 
-        repository=ai_draft_order_repository,
-        order_service=order_service,
-        product_service=product_service,
-        customer_service=customer_service 
-    )
+    AIDraftOrderService, 
+    draft_repo=ai_draft_order_repository, # FIXED: Param name was 'repository'
+    order_service=order_service,
+    product_repo=product_repository,
+    customer_repo=customer_repository
+)
