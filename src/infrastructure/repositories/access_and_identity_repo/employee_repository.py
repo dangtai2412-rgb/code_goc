@@ -6,23 +6,18 @@ class EmployeeRepository:
     def __init__(self, db_session=session):
         self.session = db_session
 
-    def add(self, emp: Employee):
-        try:
-            db_emp = EmployeeModel(
-                employee_name=emp.employee_name,
-                owner_id=emp.owner_id,
-                email=emp.email,          # SỬA LỖI: Bổ sung trường email bắt buộc
-                role=emp.role,
-                active_status=emp.active_status,
-                password=emp.password 
-            )
-            self.session.add(db_emp)
-            self.session.commit()
-            self.session.refresh(db_emp)
-            return db_emp
-        except Exception as e:
-            self.session.rollback()
-            raise e
+    def add(self, emp):
+        db_emp = EmployeeModel(
+            employee_name=emp.employee_name,
+            owner_id=emp.owner_id, # Chắc chắn có giá trị từ Token
+            email=emp.email,
+            password=emp.password,
+            role=emp.role
+        )
+        self.session.add(db_emp)
+        self.session.commit()
+        self.session.refresh(db_emp)
+        return db_emp
 
     def get_by_email(self, email: str):
         """Tìm nhân viên theo email để Login (chính xác hơn tên)"""

@@ -2,97 +2,59 @@ from flask import Blueprint, request, jsonify
 from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
-
+from services.access_and_identity_service.employee_service import EmployeeService
 employee_bp = Blueprint('employee_bp', __name__)
+
+# src/api/controllers/access_and_identity_control/employee_controller.py
 
 @employee_bp.route('/', methods=['POST'])
 @token_required
 @inject
 def create_new_employee(emp_service = Provide[Container.employee_service]):
     """
-    Tạo nhân viên mới (Cho chủ cửa hàng)
+    Tạo nhân viên mới
     ---
-    tags:
-      - Employee
-    security:
-      - Bearer: []
+    tags: [Employee]
+    security: [{BearerAuth: []}] # ĐỔI THÀNH BearerAuth ĐỂ KHỚP VỚI SWAGGER
     parameters:
       - in: body
         name: body
-        required: true
         schema:
           type: object
-          required:
-            - employee_name
-            - email
-            - password
-            - owner_id
+          required: [employee_name, email, password] # KHÔNG CẦN owner_id ở đây nữa
           properties:
-            employee_name:
-              type: string
-              example: "Nhan Vien A"
-            email:
-              type: string
-              example: "nv_a@shop.com"
-            phone_number:
-              type: string
-              example: "0912345678"
-            password:
-              type: string
-              example: "nv123"
-            role:
-              type: string
-              example: "Staff"
-              enum: ["Manager", "Staff"]
-            owner_id:
-              type: integer
-              description: ID của chủ cửa hàng quản lý nhân viên này
-              example: 1
-    responses:
-      201:
-        description: Tạo thành công
-      400:
-        description: Lỗi dữ liệu
+            employee_name: {type: string, example: "Nhan Vien A"}
+            email: {type: string, example: "nv_a@shop.com"}
+            password: {type: string, example: "nv123"}
+            role: {type: string, example: "Staff"}
     """
     try:
         data = request.get_json()
         
-        # TỰ ĐỘNG LẤY OWNER_ID TỪ TOKEN
+        # TỰ ĐỘNG LẤY TỪ TOKEN
         user_info = getattr(request, 'current_user', {})
         owner_id = user_info.get('owner_id') or user_info.get('user_id')
         
         if not owner_id:
-            return jsonify({"error": "Bạn phải đăng nhập tài khoản chủ cửa hàng"}), 403
+            return jsonify({"error": "Bạn phải là chủ cửa hàng để thực hiện hành động này"}), 403
 
-        # Truyền data và owner_id vào Service
+        # Truyền owner_id riêng biệt xuống Service
         result = emp_service.create_employee(data, owner_id)
         return jsonify({"message": "Thành công", "id": result.employee_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@employee_bp.route('/owner/<int:owner_id>', methods=['GET'])
+@employee_bp.route('/', methods=['GET']) # Bỏ owner_id khỏi URL cho an toàn
 @token_required
 @inject
-def list_employees_by_owner(owner_id, emp_service = Provide[Container.employee_service]):
+def list_employees(emp_service = Provide[Container.employee_service]):
     """
-    Lấy danh sách nhân viên theo Chủ cửa hàng
+    Lấy danh sách nhân viên của shop hiện tại
     ---
-    tags:
-      - Employee
-    security:
-      - Bearer: []
-    parameters:
-      - in: path
-        name: owner_id
-        type: integer
-        required: true
-        description: ID của chủ cửa hàng
-    responses:
-      200:
-        description: Danh sách nhân viên
+    tags: [Employee]
+    security: [{BearerAuth: []}]
     """
     try:
-        # TỰ ĐỘNG LẤY OWNER_ID TỪ TOKEN
         user_info = getattr(request, 'current_user', {})
         owner_id = user_info.get('owner_id') or user_info.get('user_id')
         

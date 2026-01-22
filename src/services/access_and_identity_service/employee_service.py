@@ -9,15 +9,13 @@ class EmployeeService:
         if self.employee_repo.get_by_email(data['email']):
             raise Exception("Email đã tồn tại")
 
-        hashed_pw = generate_password_hash(data['password'])
-
+        # Giả sử bạn có import domain Employee
         new_emp = Employee(
             employee_name=data['employee_name'],
-            owner_id=owner_id, # Dùng owner_id từ tham số
+            owner_id=owner_id, # Dùng owner_id từ Token
             email=data['email'],
-            password=hashed_pw,
-            role=data.get('role', 'Staff'),
-            active_status=True
+            password=generate_password_hash(data['password']),
+            role=data.get('role', 'Staff')
         )
         return self.employee_repo.add(new_emp)
 
