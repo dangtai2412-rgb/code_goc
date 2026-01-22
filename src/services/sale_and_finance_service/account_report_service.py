@@ -17,6 +17,17 @@ class AccountReportService:
 
     def get_owner_reports(self, owner_id):
         return self.repository.get_by_owner(owner_id)
+    def get_dashboard_stats(self, owner_id):
+        return self.repository.get_dashboard_summary(owner_id)
+
+    def get_revenue_chart(self, owner_id):
+        raw_data = self.repository.get_revenue_last_7_days(owner_id)
+        # Định dạng lại để Frontend (như Chart.js hoặc Recharts) dùng được ngay
+        return [{"date": item.date.strftime("%d/%m"), "revenue": float(item.daily_revenue)} for item in raw_data]
+
+    def get_top_products(self, owner_id):
+        raw_data = self.repository.get_top_selling_products(owner_id)
+        return [{"name": item.product_name, "value": float(item.total_sold)} for item in raw_data]
     def generate_s1_revenue_ledger(self, owner_id, start_date, end_date):
         """Sổ chi tiết doanh thu bán hàng (Mẫu S1-HKD)"""
         raw_data = self.repository.get_revenue_data_tt88(owner_id, start_date, end_date)

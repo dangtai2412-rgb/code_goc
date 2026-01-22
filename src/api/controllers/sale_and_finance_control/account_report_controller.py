@@ -35,7 +35,7 @@ def get_tt88_report(service: AccountReportService = Provide[Container.account_re
         if not report_date:
             return jsonify({"error": "Vui lòng chọn ngày báo cáo (?date=...)"}), 400
             
-        report_data = service.generate_daily_report(owner_id, report_date)
+        report_data = service.generate_s1_revenue_ledger(owner_id, report_date, report_date)
         return jsonify(report_data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
