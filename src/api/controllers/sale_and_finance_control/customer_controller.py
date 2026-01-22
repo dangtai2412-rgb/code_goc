@@ -75,8 +75,11 @@ def update_customer(id, customer_service: CustomerService = Provide[Container.cu
     """Cập nhật khách hàng"""
     try:
         data = request.get_json()
-        # FIXED: Xóa current_user khỏi tham số hàm
-        customer_service.update_customer(id, data)
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
+        # TRUYỀN THÊM owner_id
+        customer_service.update_customer(id, data, owner_id)
         return jsonify({"message": "Cập nhật thành công"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -87,7 +90,11 @@ def update_customer(id, customer_service: CustomerService = Provide[Container.cu
 def delete_customer(id, customer_service = Provide[Container.customer_service]):
     """Xóa khách hàng"""
     try:
-        customer_service.delete_customer(id)
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
+        # TRUYỀN THÊM owner_id
+        customer_service.delete_customer(id, owner_id)
         return jsonify({"message": "Xóa thành công"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400

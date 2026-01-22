@@ -37,13 +37,15 @@ class CustomerRepository:
             self.session.rollback()
             raise e
 
-    def delete(self, customer_id):
+    def delete(self, customer_id, owner_id): # Thêm owner_id
         try:
-            customer = self.get_by_id(customer_id)
+            # Truyền đủ 2 tham số để không bị lỗi TypeError
+            customer = self.get_by_id(customer_id, owner_id) 
             if customer:
                 self.session.delete(customer)
                 self.session.commit()
-            return True
+                return True
+            return False
         except Exception as e:
             self.session.rollback()
             raise e

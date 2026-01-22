@@ -21,11 +21,13 @@ class CustomerService:
         # Truyền CẢ ĐỐI TƯỢNG xuống Repo
         return self.repository.add(customer_domain)
 
-    def list_customers(self):
-        return self.repository.get_all()
-    def update_customer(self, customer_id, data):
-        customer = self.repository.get_by_id(customer_id)
-        if not customer: raise ValueError("Khách hàng không tồn tại")
+    def get_all_customers(self, owner_id):
+        return self.repository.get_all_by_owner(owner_id)
+    def update_customer(self, customer_id, data, owner_id): # Thêm owner_id
+        # Phải dùng owner_id để đảm bảo người dùng không sửa trộm khách hàng của shop khác
+        customer = self.repository.get_by_id(customer_id, owner_id)
+        if not customer: 
+            raise ValueError("Khách hàng không tồn tại hoặc bạn không có quyền sửa")
         
         customer.customer_name = data.get('customer_name', customer.customer_name)
         customer.phone_number = data.get('phone_number', customer.phone_number)
@@ -33,5 +35,5 @@ class CustomerService:
         
         return self.repository.update(customer)
 
-    def delete_customer(self, customer_id):
-        return self.repository.delete(customer_id)
+    def delete_customer(self, customer_id, owner_id): # Thêm owner_id
+        return self.repository.delete(customer_id, owner_id)
