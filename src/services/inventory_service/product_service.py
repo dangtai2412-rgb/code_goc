@@ -17,7 +17,10 @@ class ProductService:
             product_name=data.get('product_name'),
             owner_id=owner_id,
             selling_price=price,
-            stock_quantity=data.get('stock_quantity', 0)
+            stock_quantity=data.get('stock_quantity', 0),
+            sku=data.get('sku'),
+            category_id=data.get('category_id'),
+            unit_id=data.get('unit_id')
         )
 
         # 3. Gọi Repository để lưu vào DB

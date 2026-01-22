@@ -7,7 +7,11 @@ class StockImportService:
         self.detail_repo = detail_repo
         self.product_repo = product_repo
 
-    def create_import_ticket(self, data, owner_id):
+    # src/services/inventory_service/stock_import_service.py
+
+
+    # ĐỔI TÊN HÀM TỪ create_import_ticket THÀNH create_stock_import
+    def create_stock_import(self, data, owner_id): 
         try:
             # 1. Tạo Header cho phiếu nhập
             new_import = StockImportModel(
@@ -18,24 +22,23 @@ class StockImportService:
             )
             self.import_repo.add(new_import)
 
-            # 2. Duyệt qua danh sách hàng nhập
-            for item in data.get('details', []):
-                # Lưu chi tiết dòng hàng
+            # 2. Duyệt qua danh sách hàng nhập (SỬA 'details' THÀNH 'items' cho khớp Swagger)
+            for item in data.get('items', []):
                 detail = StockImportDetailModel(
                     import_id=new_import.import_id,
                     product_id=item['product_id'],
                     quantity=item['quantity'],
-                    import_price=item['import_price']
+                    unit_price=item['import_price'],
+                    line_total=item['quantity'] * item['import_price']
                 )
                 self.detail_repo.add(detail)
 
-                # CẬP NHẬT KHO: Lấy sản phẩm lên và tăng số lượng
+                # CẬP NHẬT KHO
                 product = self.product_repo.get_by_id(item['product_id'])
                 if product:
                     product.stock_quantity = (product.stock_quantity or 0) + item['quantity']
-                    # Không cần gọi update repo vì SQLAlchemy tự theo dõi sự thay đổi trong session
             
-            # 3. Kết thúc Transaction: Lưu tất cả vào DB cùng lúc
+            # 3. Lưu vào DB
             self.import_repo.session.commit() 
             return new_import
             

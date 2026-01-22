@@ -6,12 +6,13 @@ class SupplierRepository:
         self.session = db_session
 
     def add(self, sup): # Nhận đối tượng Domain
-        db_supplier = SupplierModel(
-            supplier_name=sup.supplier_name,
-            contact_info=sup.contact_info,
-            owner_id=sup.owner_id
-        )
         try:
+            db_supplier = SupplierModel(
+                supplier_name=sup.supplier_name,
+                phone_number=sup.phone_number, # SỬA: Khớp với Model
+                tax_code=sup.tax_code,         # SỬA: Khớp với Model
+                owner_id=sup.owner_id
+        )
             self.session.add(db_supplier)
             self.session.commit()
             self.session.refresh(db_supplier)
@@ -19,7 +20,6 @@ class SupplierRepository:
         except Exception as e:
             self.session.rollback()
             raise e
-
     def get_all_by_owner(self, owner_id):
         return self.session.query(SupplierModel).filter_by(owner_id=owner_id).all()
     def get_by_id(self, supplier_id, owner_id):

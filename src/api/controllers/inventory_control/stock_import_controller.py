@@ -43,10 +43,14 @@ def import_goods(stock_service = Provide[Container.stock_import_service]):
     """
     try:
         data = request.get_json()
-        # Lấy owner_id từ middleware xác thực
-        owner_id = getattr(request, 'current_user_id', None) 
         
-        # Gọi service để xử lý nghiệp vụ nhập kho
+        # SỬA LỖI TẠI ĐÂY: Lấy từ dictionary current_user giống các phần trước
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
+        if not owner_id:
+            return jsonify({"error": "Token thiếu thông tin owner_id"}), 401
+        
         result = stock_service.create_stock_import(data, owner_id)
         return jsonify({"message": "Success", "import_id": result.import_id}), 201
     except Exception as e:

@@ -23,26 +23,16 @@ class AuthService:
             role = "employee"
 
         if user and check_password_hash(user.password, password):
-            # GIẢI PHÁP: Thử lấy 'id' trước (vì Domain Model thường dùng self.id)
-            # Nếu không có mới thử các tên cụ thể khác
-            user_id = getattr(user, 'id', None) or \
-                      getattr(user, 'owner_id', None) or \
+            user_id = getattr(user, 'owner_id', None) or \
                       getattr(user, 'admin_id', None) or \
-                      getattr(user, 'employee_id', None)
-            
-            # Nếu là chủ (owner) thì owner_id chính là user_id
-            # Nếu là nhân viên, lấy owner_id từ bản ghi của họ (cột owner_id trong bảng Employees)
+                      getattr(user, 'employee_id', None) or \
+                      getattr(user, 'id', None)
             owner_id = user_id if role == "owner" else getattr(user, 'owner_id', None)
-
-            # Đóng gói Token
             payload = {
-                'user_id': user_id,
-                'owner_id': owner_id,
-                'role': role,
-                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-            }
-            
-            token = jwt.encode(payload, self.secret_key, algorithm="HS256")
-            return token, role
-            
+            'user_id': user_id,
+            'owner_id': owner_id,
+            'role': role,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+        }   
+            return jwt.encode(payload, self.secret_key, algorithm="HS256"), role
         return None, None

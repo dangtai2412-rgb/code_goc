@@ -11,3 +11,5 @@ class StockImportDetailModel(Base):
     product_id = Column(Integer, ForeignKey('products.product_id'))
     quantity = Column(Integer, nullable=False)
     unit_price = Column(Numeric(18, 2), nullable=False)
+    line_total = Column(Numeric(18, 2), nullable=True)
+    

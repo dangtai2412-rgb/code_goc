@@ -9,6 +9,7 @@ class StockImportRepository:
         """Chỉ lưu thông tin phiếu nhập, không tự ý cập nhật kho tại đây"""
         try:
             self.session.add(import_model)
+            self.session.flush()
             # Không gọi commit ở đây để Service có thể quản lý Transaction cho cả chi tiết
             return import_model
         except Exception as e:

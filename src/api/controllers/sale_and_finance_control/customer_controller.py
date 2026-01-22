@@ -31,15 +31,14 @@ def add_new_customer(customer_service: CustomerService = Provide[Container.custo
     """
     try:
         data = request.get_json()
-        
-        # FIXED: Lấy thông tin user từ Dictionary gắn trong request
         user_info = getattr(request, 'current_user', {})
-        
-        # Lấy owner_id từ token (Nếu là nhân viên thì lấy owner_id, nếu là chủ thì lấy user_id)
         owner_id = user_info.get('owner_id') or user_info.get('user_id')
-        data['owner_id'] = owner_id
         
-        result = customer_service.create_customer(data)
+        if not owner_id:
+            return jsonify({"error": "Token thiếu owner_id"}), 401
+
+        # SỬA: Truyền data VÀ owner_id tách biệt
+        result = customer_service.create_customer(data, owner_id)
         return jsonify({"message": "Thành công", "id": result.customer_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400

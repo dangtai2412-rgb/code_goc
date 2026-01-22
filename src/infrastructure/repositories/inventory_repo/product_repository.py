@@ -20,8 +20,9 @@ class ProductRepository:
                 stock_quantity=prod.stock_quantity,
                 sku=getattr(prod, 'sku', None),
                 cost_price=getattr(prod, 'cost_price', 0),
-                category_id=getattr(prod, 'category_id', None),
-                unit_id=getattr(prod, 'unit_id', None)
+            category_id=getattr(prod, 'category_id', None),
+            unit_id=getattr(prod, 'unit_id', None)
+                
             )
             self.session.add(db_prod)
             self.session.commit()

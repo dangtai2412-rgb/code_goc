@@ -1,18 +1,25 @@
+
+from domain.models.customer import Customer
+
+
 class CustomerService:
     def __init__(self, repository):
         self.repository = repository
 
-    def create_customer(self, data):
+    def create_customer(self, data, owner_id): # Nhận owner_id từ Controller
         if not data.get('customer_name'):
             raise ValueError("Tên khách hàng không được để trống")
         
-        # Truyền thêm owner_id từ data xuống Repository
-        return self.repository.add(
-            name=data['customer_name'], 
-            phone=data.get('phone_number'), 
+        # BƯỚC QUAN TRỌNG: Tạo đối tượng Domain trước
+        customer_domain = Customer(
+            customer_name=data['customer_name'],
+            phone_number=data.get('phone_number'),
             address=data.get('address'),
-            owner_id=data.get('owner_id')
+            owner_id=owner_id # Dùng owner_id từ Token
         )
+        
+        # Truyền CẢ ĐỐI TƯỢNG xuống Repo
+        return self.repository.add(customer_domain)
 
     def list_customers(self):
         return self.repository.get_all()

@@ -10,11 +10,12 @@ class StockImportDetailRepository:
         """Lưu chi tiết dòng hàng vào Database"""
         try:
             self.session.add(detail_model)
-            self.session.commit() # FIXED: Added commit
-            self.session.refresh(detail_model) # FIXED: Refresh to get the new ID
+            #self.session.commit() # FIXED: Added commit
+            #self.session.refresh(detail_model) # FIXED: Refresh to get the new ID
+            self.session.flush()
             return detail_model
         except Exception as e:
-            self.session.rollback()
+            #self.session.rollback()
             raise e
 
     def get_by_import_id(self, import_id):
