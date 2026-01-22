@@ -1,3 +1,4 @@
+
 from werkzeug.security import check_password_hash
 import jwt
 import datetime
@@ -26,18 +27,20 @@ class AuthService:
 
         # Kiểm tra user và mật khẩu
         if user and check_password_hash(user.password, password):
-        # Lấy ID của user hiện tại
-            current_id = getattr(user, 'admin_id', getattr(user, 'owner_id', getattr(user, 'employee_id', None)))
-        
-        # Xác định owner_id (Nếu là chủ thì là chính họ, nếu là nhân viên thì lấy owner_id của họ)
-            owner_id = current_id if role == "owner" else getattr(user, 'owner_id', None)
+    # 1. Lấy ID của người đang đăng nhập
+            user_id = getattr(user, 'admin_id', getattr(user, 'owner_id', getattr(user, 'employee_id', None)))
+    
+    # 2. Xác định owner_id: 
+    # Nếu là chủ thì chính là user_id, nếu là nhân viên thì lấy owner_id từ bản ghi của họ
+            owner_id = user_id if role == "owner" else getattr(user, 'owner_id', None)
 
+    # 3. Đóng gói vào Token
             token = jwt.encode({
-                'user_id': current_id,
-                'owner_id': owner_id, # BỔ SUNG DÒNG NÀY
+                'user_id': user_id,
+                'owner_id': owner_id, # Đảm bảo khóa này tên là 'owner_id'
                 'role': role,
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
             }, self.secret_key, algorithm="HS256")
-        
+    
             return token, role
         return None, None
