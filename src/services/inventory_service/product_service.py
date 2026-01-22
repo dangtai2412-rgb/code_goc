@@ -5,7 +5,7 @@ class ProductService:
         # repository ở đây chính là ProductRepository từ infrastructure
         self.repository = repository
 
-    def create_product(self, data):
+    def create_product(self, data, owner_id):
         # 1. Kiểm tra logic (ví dụ giá không được âm)
         price = float(data.get('selling_price', 0))
         stock = int(data.get('stock_quantity', 0))
@@ -15,7 +15,7 @@ class ProductService:
         # 2. Đóng gói dữ liệu vào đối tượng Product (Domain)
         product_domain = Product(
             product_name=data.get('product_name'),
-            owner_id=data.get('owner_id'),
+            owner_id=owner_id,
             selling_price=price,
             stock_quantity=data.get('stock_quantity', 0)
         )

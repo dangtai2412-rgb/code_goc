@@ -37,8 +37,8 @@ def create_new_product(product_service = Provide[Container.product_service]):
         owner_id = user_info.get('owner_id') or user_info.get('user_id')
         data['owner_id'] = owner_id
         
-        product = product_service.create_product(data)
-        return jsonify({"message": "Thành công", "id": product.product_id}), 201
+        result = product_service.create_product(data, owner_id)
+        return jsonify({"message": "Thành công", "id": result.product_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
