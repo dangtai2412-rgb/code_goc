@@ -57,6 +57,8 @@ def list_products_by_owner(product_service = Provide[Container.product_service])
     try:
         user_info = getattr(request, 'current_user', {})
         owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        if not owner_id:
+            return jsonify({"error": "Token thiếu thông tin owner_id. Vui lòng đăng nhập lại."}), 401
         
         products = product_service.get_products_by_owner(owner_id)
         result = [{"id": p.product_id, "name": p.product_name, "price": p.selling_price} for p in products]

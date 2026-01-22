@@ -10,4 +10,4 @@ class UnitModel(Base):
     conversion_rate = Column(Numeric(10, 4), default=1)
     is_base_unit = Column(Boolean, default=True)
     description = Column(String(255), nullable=True)
-    product_id = Column(Integer, ForeignKey('products.product_id'), nullable=False)
+    product_id = Column(Integer, ForeignKey('products.product_id'), nullable=True)

@@ -1,4 +1,3 @@
-# src/domain/models/unit.py
 class Unit:
     def __init__(self, unit_name, description=None, owner_id=None, product_id=None, conversion_rate=1.0, is_base_unit=True, unit_id=None):
         self.unit_id = unit_id

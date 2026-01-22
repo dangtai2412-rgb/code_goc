@@ -14,7 +14,8 @@ class UnitRepository:
             description=unit.description,
             owner_id=unit.owner_id,
             conversion_rate=getattr(unit, 'conversion_rate', 1), 
-            is_base_unit=getattr(unit, 'is_base_unit', True)
+            is_base_unit=getattr(unit, 'is_base_unit', True),
+            product_id=unit.product_id
         )
         try:
             self.db_session.add(db_unit)

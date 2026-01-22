@@ -17,8 +17,11 @@ class ProductRepository:
                 product_name=prod.product_name,
                 owner_id=prod.owner_id,
                 selling_price=prod.selling_price,
-                stock_quantity=prod.stock_quantity
-                
+                stock_quantity=prod.stock_quantity,
+                sku=getattr(prod, 'sku', None),
+                cost_price=getattr(prod, 'cost_price', 0),
+                category_id=getattr(prod, 'category_id', None),
+                unit_id=getattr(prod, 'unit_id', None)
             )
             self.session.add(db_prod)
             self.session.commit()

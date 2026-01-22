@@ -41,6 +41,8 @@ def create_new_unit(unit_service = Provide[Container.unit_service]):
         # Lấy owner_id từ Token
         user_info = getattr(request, 'current_user', {})
         owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        if not owner_id:
+            return jsonify({"error": "Token thiếu thông tin owner_id. Vui lòng đăng nhập lại."}), 401
         
         # Gọi hàm create_unit (đã sửa tên trong Service)
         result = unit_service.create_unit(data, owner_id)

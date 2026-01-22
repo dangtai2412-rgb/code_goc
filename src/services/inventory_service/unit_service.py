@@ -8,7 +8,8 @@ class UnitService:
         new_unit = Unit(
             unit_name=data.get('unit_name'),
             description=data.get('description'),
-            owner_id=owner_id # Đảm bảo có owner_id
+            owner_id=owner_id ,# Đảm bảo có 
+            product_id=data.get('product_id')
         )
         return self.unit_repo.add(new_unit)
 
