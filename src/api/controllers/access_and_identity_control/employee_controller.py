@@ -15,7 +15,8 @@ def create_new_employee(emp_service = Provide[Container.employee_service]):
     Tạo nhân viên mới
     ---
     tags: [Employee]
-    security: [{BearerAuth: []}] # ĐỔI THÀNH BearerAuth ĐỂ KHỚP VỚI SWAGGER
+    security:
+      - BearerAuth: []
     parameters:
       - in: body
         name: body
@@ -33,7 +34,7 @@ def create_new_employee(emp_service = Provide[Container.employee_service]):
         
         # TỰ ĐỘNG LẤY TỪ TOKEN
         user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
         
         if not owner_id:
             return jsonify({"error": "Bạn phải là chủ cửa hàng để thực hiện hành động này"}), 403
@@ -56,7 +57,7 @@ def list_employees(emp_service = Provide[Container.employee_service]):
     """
     try:
         user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
         
         employees = emp_service.get_employees_by_owner(owner_id)
         return jsonify([
