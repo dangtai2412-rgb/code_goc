@@ -102,3 +102,22 @@ def get_top_products(service: AccountReportService = Provide[Container.account_r
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 500
+@account_report_bp.route('/tt88/s1', methods=['GET'])
+@token_required
+@inject
+def get_s1_report(service: AccountReportService = Provide[Container.account_report_service]):
+    """Lấy sổ doanh thu S1-HKD theo Thông tư 88"""
+    try:
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not start_date or not end_date:
+            return jsonify({"error": "Thiếu start_date hoặc end_date (YYYY-MM-DD)"}), 400
+            
+        report = service.generate_s1_revenue_ledger(owner_id, start_date, end_date)
+        return jsonify(report), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
