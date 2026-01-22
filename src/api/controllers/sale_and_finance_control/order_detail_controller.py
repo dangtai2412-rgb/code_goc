@@ -15,38 +15,41 @@ def add_order_detail(detail_service: OrderDetailService = Provide[Container.orde
     Thêm chi tiết sản phẩm vào đơn hàng
     ---
     tags: [Order Details]
-    security: [{BearerAuth: []}]
+    security:
+      - BearerAuth: []
     parameters:
       - in: body
         name: body
         schema:
+          type: object
+          required: [order_id, product_id, quantity, unit_price]
           properties:
             order_id: {type: integer, example: 1}
             product_id: {type: integer, example: 1}
             quantity: {type: integer, example: 10}
             unit_price: {type: number, example: 50000}
     responses:
-      201: {description: "Thành công"}
+      201:
+        description: Thành công
+        schema:
+          type: object
+          properties:
+            message: {type: string}
+            id: {type: integer}
     """
     try:
         data = request.get_json()
-        
-        # Lấy thông tin user từ request (do middleware gắn vào)
         user_info = getattr(request, 'current_user', {})
         
-        # Tự động gán owner_id từ user đang đăng nhập
-        # Dùng .get() vì user_info là một Dictionary
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        # SỬA: Lấy owner_id linh hoạt từ key id/user_id/owner_id
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
         data['owner_id'] = owner_id
-        
-        # Lấy ID người trực tiếp thực hiện
-        user_id = user_info.get('user_id')
         
         result = detail_service.create_detail(data)
         
         return jsonify({
             "message": "Thêm chi tiết đơn hàng thành công", 
-            "id": result.detail_id # Sửa lại để trả về đúng ID của detail vừa tạo
+            "id": result.order_detail_id # Đảm bảo tên trường id đúng với Model của bạn
         }), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400

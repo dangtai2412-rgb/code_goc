@@ -24,7 +24,7 @@ class CustomerRepository:
             raise e
         
 
-    def get_all(self):
+    def get_all_customers(self):
         return self.session.query(CustomerModel).all()
     def get_by_id(self, customer_id,owner_id):
         return self.session.query(CustomerModel).filter_by(customer_id=customer_id,owner_id=owner_id).first()
@@ -50,5 +50,5 @@ class CustomerRepository:
             self.session.rollback()
             raise e
     def get_all_by_owner(self, owner_id):
-        """Lấy toàn bộ khách hàng của một shop cụ thể"""
+        # Lọc danh sách khách hàng thuộc về chủ shop đang đăng nhập
         return self.session.query(CustomerModel).filter_by(owner_id=owner_id).all()

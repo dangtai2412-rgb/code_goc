@@ -14,3 +14,13 @@ class StockImportModel(Base):
     # Thêm thông tin thanh toán để quản lý công nợ NCC
     payment_status = Column(String(20), default='PAID') # PAID, DEBT
     note = Column(String(255), nullable=True)
+    def to_dict(self):
+        return {
+            "import_id": self.import_id,
+            "owner_id": self.owner_id,
+            "supplier_id": self.supplier_id,
+            "import_date": self.import_date.isoformat() if self.import_date else None,
+            "total_amount": float(self.total_amount) if self.total_amount else 0,
+            "payment_status": self.payment_status,
+            "note": self.note
+        }

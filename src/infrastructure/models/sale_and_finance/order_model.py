@@ -20,3 +20,13 @@ class OrderModel(Base):
 
     # Quan hệ với chi tiết đơn hàng
     details = relationship("OrderDetailModel", backref="order", cascade="all, delete-orphan")
+    def to_dict(self):
+        return {
+            "order_id": self.order_id,
+            "owner_id": self.owner_id,
+            "customer_id": self.customer_id,
+            "total_amount": float(self.total_amount) if self.total_amount else 0,
+            "payment_status": self.payment_status,
+            "order_date": self.order_date.isoformat() if self.order_date else None,
+            "payment_method": self.payment_method
+        }

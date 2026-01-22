@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify
 from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
-
+from services.inventory_service.stock_import_service import StockImportService
 stock_import_bp = Blueprint('stock_import_bp', __name__)
 
 @stock_import_bp.route('/', methods=['POST'])
@@ -59,7 +59,7 @@ def import_goods(stock_service = Provide[Container.stock_import_service]):
 @stock_import_bp.route('/', methods=['GET'])
 @token_required
 @inject
-def get_import_history(stock_service = Provide[Container.stock_import_service]):
+def get_import_history(stock_import_service = Provide[Container.stock_import_service]):
     """
     Lấy danh sách lịch sử nhập hàng của cửa hàng
     ---
@@ -70,9 +70,16 @@ def get_import_history(stock_service = Provide[Container.stock_import_service]):
       401: {description: "Chưa xác thực"}
     """
     try:
-        owner_id = getattr(request, 'current_user_id', None)
-        # Truy vấn lịch sử nhập hàng theo chủ cửa hàng
-        history = stock_service.get_history_by_owner(owner_id)
-        return jsonify(history), 200
+        # ĐỒNG BỘ CÁCH LẤY ID VỚI HÀM POST
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+        
+        if not owner_id:
+            return jsonify({"error": "Không tìm thấy owner_id trong token"}), 401
+            
+        history = stock_import_service.get_history_by_owner(owner_id)
+        
+        # Chuyển đổi danh sách Model thành danh sách Dictionary
+        return jsonify([item.to_dict() for item in history]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

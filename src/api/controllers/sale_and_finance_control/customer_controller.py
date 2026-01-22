@@ -32,7 +32,7 @@ def add_new_customer(customer_service: CustomerService = Provide[Container.custo
     try:
         data = request.get_json()
         user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
         
         if not owner_id:
             return jsonify({"error": "Token thiếu owner_id"}), 401
@@ -51,12 +51,35 @@ def get_all_customers(customer_service: CustomerService = Provide[Container.cust
     Lấy danh sách khách hàng
     ---
     tags: [Customer]
-    security: [{BearerAuth: []}]
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: Danh sách khách hàng của shop hiện tại
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              name:
+                type: string
+                example: "Nguyen Van A"
+              phone:
+                type: string
+                example: "0912345678"
+              address:
+                type: string
+                example: "123 Đường ABC"
+      401:
+        description: Token không hợp lệ hoặc hết hạn
     """
     try:
         # FIXED: Xóa current_user khỏi tham số và lấy từ request
         user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
         
         customers = customer_service.get_all_customers(owner_id)
         return jsonify([{
@@ -76,7 +99,7 @@ def update_customer(id, customer_service: CustomerService = Provide[Container.cu
     try:
         data = request.get_json()
         user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
         
         # TRUYỀN THÊM owner_id
         customer_service.update_customer(id, data, owner_id)
@@ -91,7 +114,7 @@ def delete_customer(id, customer_service = Provide[Container.customer_service]):
     """Xóa khách hàng"""
     try:
         user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
         
         # TRUYỀN THÊM owner_id
         customer_service.delete_customer(id, owner_id)

@@ -15,3 +15,5 @@ class StockImportRepository:
         except Exception as e:
             self.session.rollback()
             raise e
+    def get_all_by_owner(self, owner_id):
+        return self.session.query(StockImportModel).filter_by(owner_id=owner_id).all()

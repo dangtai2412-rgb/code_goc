@@ -12,7 +12,7 @@ class OrderService:
         try:
             # 1. Tạo đơn hàng chính
             new_order = OrderModel(
-                owner_id=data.get('owner_id'),
+                owner_id=owner_id,
                 customer_id=data.get('customer_id'),
                 total_amount=data.get('total_amount', 0),
                 payment_status=data.get('payment_status', 'UNPAID'),
@@ -69,3 +69,6 @@ class OrderService:
             # Nếu có bất kỳ lỗi nào xảy ra, hủy bỏ toàn bộ các thao tác trên
             self.repo.session.rollback()
             raise e
+    def get_orders_by_owner(self, owner_id):
+        # Có thể bổ sung thêm logic nghiệp vụ hoặc phân trang ở đây nếu cần
+        return self.repo.get_all_by_owner(owner_id)

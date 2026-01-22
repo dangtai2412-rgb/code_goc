@@ -10,38 +10,23 @@ payment_bp = Blueprint('payment_bp', __name__)
 @payment_bp.route('/', methods=['POST'])
 @token_required
 @inject
-def process_debt_payment(payment_service: PaymentService = Provide[Container.payment_service]):
+def create_payment(payment_service: PaymentService = Provide[Container.payment_service]):
     """
-    Thanh toán công nợ
+    Tạo phiếu thanh toán (Thu tiền)
     ---
-    tags: [Finance & Debt]
-    security: [{BearerAuth: []}]
-    parameters:
-      - in: body
-        name: body
-        schema:
-          required: [debt_id, amount]
-          properties:
-            debt_id: {type: integer}
-            amount: {type: number}
-            payment_method: {type: string}
-    responses:
-      201: {description: "Thành công"}
+    tags: [Finance & Payment]
+    security:
+      - BearerAuth: []
     """
     try:
         data = request.get_json()
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
         
-        # Mặc dù logic hiện tại của bạn không dùng đến current_user, 
-        # nhưng việc xóa nó khỏi tham số hàm là bắt buộc để tránh lỗi 500.
+        # Chỉ cần gọi 1 hàm duy nhất xử lý cả 2 trường hợp
+        result = payment_service.process_payment(data, owner_id)
         
-        result = payment_service.process_payment(
-            data.get('debt_id'), 
-            data.get('amount'), 
-            data.get('payment_method')
-        )
-        return jsonify({
-            "message": "Thanh toán thành công", 
-            "payment_id": result.payment_id
-        }), 201
+        return jsonify({"message": "Thanh toán thành công", "id": result.payment_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+

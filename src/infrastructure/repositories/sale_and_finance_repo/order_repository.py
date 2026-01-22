@@ -14,3 +14,6 @@ class OrderRepository:
         except Exception as e:
             self.session.rollback()
             raise e
+    def get_all_by_owner(self, owner_id):
+        # Lấy toàn bộ đơn hàng của chủ shop, sắp xếp theo ngày mới nhất
+        return self.session.query(OrderModel).filter_by(owner_id=owner_id).order_by(OrderModel.order_date.desc()).all()

@@ -22,12 +22,28 @@ def create_new_employee(emp_service = Provide[Container.employee_service]):
         name: body
         schema:
           type: object
-          required: [employee_name, email, password] # KHÔNG CẦN owner_id ở đây nữa
+          required: [employee_name, email, password]
           properties:
-            employee_name: {type: string, example: "Nhan Vien A"}
-            email: {type: string, example: "nv_a@shop.com"}
-            password: {type: string, example: "nv123"}
+            employee_name: {type: string, example: "Nguyen Van A"}
+            email: {type: string, example: "nva@shop.com"}
+            password: {type: string, example: "123456"}
             role: {type: string, example: "Staff"}
+    responses:
+      201:
+        description: Tạo nhân viên thành công
+        schema:
+          type: object
+          properties:
+            message: {type: string, example: "Thành công"}
+            id: {type: integer, example: 1}
+      400:
+        description: Lỗi dữ liệu đầu vào hoặc email đã tồn tại
+        schema:
+          type: object
+          properties:
+            error: {type: string, example: "Email đã tồn tại"}
+      403:
+        description: Không có quyền (Chỉ Business Owner mới được tạo)
     """
     try:
         data = request.get_json()
@@ -53,7 +69,22 @@ def list_employees(emp_service = Provide[Container.employee_service]):
     Lấy danh sách nhân viên của shop hiện tại
     ---
     tags: [Employee]
-    security: [{BearerAuth: []}]
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: Danh sách nhân viên
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: integer, example: 1}
+              name: {type: string, example: "Nguyen Van A"}
+              email: {type: string, example: "nva@shop.com"}
+              role: {type: string, example: "Staff"}
+      401:
+        description: Token không hợp lệ hoặc đã hết hạn
     """
     try:
         user_info = getattr(request, 'current_user', {})

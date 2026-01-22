@@ -142,7 +142,7 @@ class Container(containers.DeclarativeContainer):
         secret_key=Config.SECRET_KEY
     )
     business_owner_service = providers.Factory(BusinessOwnerService, repository=business_owner_repository)
-    employee_service = providers.Factory(EmployeeService, repository=employee_repository)
+    employee_service = providers.Factory(EmployeeService, employee_repo=employee_repository)
     subscription_plan_service = providers.Factory(SubscriptionPlanService, repository=subscription_plan_repository)
     product_service = providers.Factory(ProductService, repository=product_repository)
     unit_service = providers.Factory(UnitService, unit_repo=unit_repository)

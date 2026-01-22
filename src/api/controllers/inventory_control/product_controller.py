@@ -24,6 +24,7 @@ def create_new_product(product_service = Provide[Container.product_service]):
           required: [product_name, selling_price]
           properties:
             product_name: {type: string, example: "Gạch men 60x60"}
+            sku: {type: string, description: "Mã sản phẩm (Nếu trống hệ thống tự sinh)"}
             selling_price: {type: number, example: 150000}
             stock_quantity: {type: integer, example: 100}
     responses:

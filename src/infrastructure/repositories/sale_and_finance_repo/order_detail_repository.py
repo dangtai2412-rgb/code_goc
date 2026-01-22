@@ -6,15 +6,16 @@ class OrderDetailRepository:
     def __init__(self, db_session=session):
         self.session = db_session
 
-    def add(self, detail: OrderDetail):
+    def add(self, data):
         try:
             db_detail = OrderDetailModel(
-                order_id=detail.order_id,
-                product_id=detail.product_id,
-                unit_id=detail.unit_id,
-                order_quantity=detail.order_quantity,
-                unit_price=detail.unit_price,
-                line_total=detail.line_total
+                # SỬA: Thay . thành .get() vì data là dictionary
+                order_id=data.get('order_id'),
+                product_id=data.get('product_id'),
+                quantity=data.get('quantity', 0),
+                unit_price=data.get('unit_price', 0),
+                # Tự tính thành tiền nếu chưa có
+                line_total=data.get('quantity', 0) * data.get('unit_price', 0)
             )
             self.session.add(db_detail)
             self.session.commit()

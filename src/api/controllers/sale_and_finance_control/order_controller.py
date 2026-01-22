@@ -57,3 +57,40 @@ def post_order(order_service: OrderService = Provide[Container.order_service]):
         }), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+@order_bp.route('/', methods=['GET'])
+@token_required
+@inject
+def get_order_list(order_service: OrderService = Provide[Container.order_service]):
+    """
+    Lấy danh sách đơn hàng của shop
+    ---
+    tags: [Orders]
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: Danh sách đơn hàng trả về thành công
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              order_id: {type: integer, example: 1}
+              total_amount: {type: number, example: 500000}
+              payment_status: {type: string, example: "PAID"}
+              order_date: {type: string, example: "2024-01-22T21:30:00"}
+    """
+    try:
+        # Lấy owner_id từ Token bảo mật
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+        
+        if not owner_id:
+            return jsonify({"error": "Không tìm thấy thông tin chủ cửa hàng"}), 401
+            
+        orders = order_service.get_orders_by_owner(owner_id)
+        
+        # Chuyển đổi danh sách Model sang JSON (Đảm bảo OrderModel đã có hàm to_dict)
+        return jsonify([order.to_dict() for order in orders]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

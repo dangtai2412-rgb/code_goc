@@ -45,3 +45,6 @@ class StockImportService:
         except Exception as e:
             self.import_repo.session.rollback()
             raise e
+    def get_history_by_owner(self, owner_id):
+        # SỬA TẠI ĐÂY: Dùng self.import_repo thay vì self.repository
+        return self.import_repo.get_all_by_owner(owner_id)

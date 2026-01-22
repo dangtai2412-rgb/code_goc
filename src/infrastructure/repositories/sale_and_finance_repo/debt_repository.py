@@ -25,3 +25,9 @@ class DebtRepository:
             raise e
     def get_by_customer(self, customer_id):
         return self.session.query(DebtModel).filter_by(customer_id=customer_id).all()
+    def get_by_id(self, debt_id, owner_id):
+        # Lấy khoản nợ theo ID và phải đúng chủ cửa hàng
+        return self.session.query(DebtModel).filter_by(
+            debt_id=debt_id, 
+            owner_id=owner_id
+        ).first()

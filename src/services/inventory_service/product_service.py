@@ -1,5 +1,5 @@
 from domain.models.product import Product
-
+import datetime
 class ProductService:
     def __init__(self, repository):
         # repository ở đây chính là ProductRepository từ infrastructure
@@ -7,6 +7,14 @@ class ProductService:
 
     def create_product(self, data, owner_id):
         # 1. Kiểm tra logic (ví dụ giá không được âm)
+        sku = data.get('sku')
+        
+        # 2. LOGIC CÁCH 3: Nếu SKU trống hoặc None, tự động sinh mã
+        if not sku:
+            # Sinh mã theo định dạng: SP + NămThángNgàyGiờPhútGiây (Ví dụ: SP20240122213055)
+            sku = f"SP{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+
         price = float(data.get('selling_price', 0))
         stock = int(data.get('stock_quantity', 0))
         if price < 0:
@@ -18,7 +26,7 @@ class ProductService:
             owner_id=owner_id,
             selling_price=price,
             stock_quantity=data.get('stock_quantity', 0),
-            sku=data.get('sku'),
+            sku=sku,
             category_id=data.get('category_id'),
             unit_id=data.get('unit_id')
         )

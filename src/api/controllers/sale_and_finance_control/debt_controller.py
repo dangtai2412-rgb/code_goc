@@ -31,11 +31,26 @@ def create_customer_debt(debt_service: DebtService = Provide[Container.debt_serv
     try:
         data = request.get_json()
         
+        # 1. Lấy thông tin từ Token để xác định chủ cửa hàng
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+        
+        if not owner_id:
+            return jsonify({"error": "Không tìm thấy thông tin chủ cửa hàng trong token"}), 401
+
+        # 2. Gọi Service với đầy đủ 4 tham số: order_id, customer_id, owner_id, amount
         result = debt_service.create_debt_from_order(
-            data.get('order_id'), 
-            data.get('customer_id'), 
-            data.get('debt_amount')
+            order_id=data.get('order_id'),
+            customer_id=data.get('customer_id'),
+            owner_id=owner_id,
+            amount=data.get('debt_amount') # Map từ key 'debt_amount' trong JSON sang 'amount' của hàm
         )
-        return jsonify({"message": "Ghi nợ thành công", "id": result.debt_id}), 201
+        
+        return jsonify({
+            "message": "Ghi nợ thành công", 
+            "id": result.debt_id,
+            "remaining_debt": result.remaining_debt
+        }), 201
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 400

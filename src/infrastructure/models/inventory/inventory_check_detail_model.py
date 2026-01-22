@@ -12,3 +12,4 @@ class InventoryCheckDetailModel(Base):
     actual_quantity = Column(Integer, nullable=False) # Tồn kho thực tế đếm được
     variance = Column(Integer, nullable=False)        # Chênh lệch (Thực tế - Hệ thống)
     reason = Column(String(255), nullable=True)       # Lý do (Vỡ, mất, nhầm lẫn...)
+    
