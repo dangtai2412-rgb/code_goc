@@ -30,7 +30,7 @@ class OrderService:
                 detail_model = OrderDetailModel(
                     order_id=new_order.order_id, # SQLAlchemy sẽ tự lấy ID sau khi flush/commit
                     product_id=item['product_id'],
-                    order_quantity=item['quantity'],
+                    quantity=item['quantity'],
                     unit_price=item['unit_price'],
                     line_total=item['quantity'] * item['unit_price']
                 )
@@ -52,10 +52,12 @@ class OrderService:
             
             if paid_amount < total and new_order.customer_id:
                 debt_amount = total - paid_amount
+                owner_id = data.get('owner_id')
                 # Ghi nợ thông qua DebtService (Để logic xử lý nợ nằm riêng bên đó)
                 self.debt_service.create_debt_from_order(
                     customer_id=new_order.customer_id,
                     order_id=new_order.order_id,
+                    owner_id=owner_id,
                     amount=debt_amount
                 )
 

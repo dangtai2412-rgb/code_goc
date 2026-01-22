@@ -56,7 +56,16 @@ def create_new_employee(emp_service = Provide[Container.employee_service]):
     """
     try:
         data = request.get_json()
-        result = emp_service.create_employee(data)
+        
+        # TỰ ĐỘNG LẤY OWNER_ID TỪ TOKEN
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
+        if not owner_id:
+            return jsonify({"error": "Bạn phải đăng nhập tài khoản chủ cửa hàng"}), 403
+
+        # Truyền data và owner_id vào Service
+        result = emp_service.create_employee(data, owner_id)
         return jsonify({"message": "Thành công", "id": result.employee_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -83,6 +92,10 @@ def list_employees_by_owner(owner_id, emp_service = Provide[Container.employee_s
         description: Danh sách nhân viên
     """
     try:
+        # TỰ ĐỘNG LẤY OWNER_ID TỪ TOKEN
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        
         employees = emp_service.get_employees_by_owner(owner_id)
         return jsonify([
             {"id": e.employee_id, "name": e.employee_name, "role": e.role, "email": e.email} 

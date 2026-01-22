@@ -6,20 +6,22 @@ class DebtRepository:
     def __init__(self, db_session=session):
         self.session = db_session
 
-    def add(self, order_id, customer_id, debt_amount, debt_status='Unpaid'): # Nhận đủ tham số
+    def add(self, order_id, customer_id, owner_id, amount, debt_status='Active'):
         try:
             db_debt = DebtModel(
                 order_id=order_id,
                 customer_id=customer_id,
-                debt_amount=debt_amount,
+                owner_id=owner_id,        
+                total_debt=amount,        
+                remaining_debt=amount,
                 debt_status=debt_status
             )
-            self.db_session.add(db_debt)
-            self.db_session.commit()
-            self.db_session.refresh(db_debt)
+            self.session.add(db_debt)
+            self.session.commit()
+            self.session.refresh(db_debt)
             return db_debt
         except Exception as e:
-            self.db_session.rollback()
+            self.session.rollback()
             raise e
     def get_by_customer(self, customer_id):
         return self.session.query(DebtModel).filter_by(customer_id=customer_id).all()
