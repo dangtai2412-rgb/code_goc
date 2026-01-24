@@ -29,27 +29,44 @@ def login_system(auth_service: AuthService = Provide[Container.auth_service]):
     responses:
       200:
         description: Đăng nhập thành công, trả về token JWT
+        schema:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              type: object
+              properties:
+                id:
+                  type: integer
+                name:
+                  type: string
+                role:
+                  type: string
+      400:
+        description: Thiếu dữ liệu đầu vào
+      401:
+        description: Sai tài khoản hoặc mật khẩu
+      500:
+        description: Lỗi hệ thống
     """
     try:
         data = request.get_json()
         if not data:
             return jsonify({"error": "Thiếu dữ liệu đăng nhập"}), 400
-
+            
+        # Thống nhất dùng email làm định danh chính
         email = data.get('email') or data.get('username')
         password = data.get('password')
 
         if not email or not password:
             return jsonify({"error": "Thiếu email hoặc mật khẩu"}), 400
-
+            
         result = auth_service.login(email, password)
-
+        
         if result:
-            # result is {"token": "...", "user": {...}}
-            return jsonify({
-                "token": result["token"],
-                "user": result["user"]
-            }), 200
-
+            return jsonify(result), 200
+        
         return jsonify({"error": "Tài khoản hoặc mật khẩu không chính xác"}), 401
     except Exception as e:
         return jsonify({"error": str(e)}), 500
