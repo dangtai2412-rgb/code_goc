@@ -46,9 +46,9 @@ class AIAssistantService:
         # 3. LƯU VÀO DATABASE qua ai_draft_order_repo
         # Đảm bảo tên phương thức khớp với AIDraftOrderRepository
         draft_order = self.ai_draft_order_repo.create_draft(
-            employee_id=None, # Hoặc lấy từ current_user nếu cần
-            raw_text=text_input,
-            extracted_json=json.dumps(ai_extracted_data)
+        raw_text=text_input,
+        extracted_json=ai_extracted_data,
+        employee_id=None  # hoặc actual employee id
         )
 
         return draft_order

@@ -73,7 +73,9 @@ def confirm_draft(draft_id, ai_service = Provide[Container.ai_draft_order_servic
         emp_id = user_info.get('user_id') or user_info.get('owner_id')
         
         # 2. Gọi service xử lý
-        order = ai_service.confirm_and_create_order(draft_id, emp_id)
+        user_info = getattr(request, 'current_user', {})
+        owner_id = user_info.get('owner_id') or user_info.get('user_id')
+        order = ai_service.confirm_and_create_order(draft_id, emp_id, owner_id=owner_id)
         
         # 3. Trả về mã 201 nếu tạo mới thành công
         return jsonify({

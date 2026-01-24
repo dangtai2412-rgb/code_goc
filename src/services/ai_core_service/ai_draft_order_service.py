@@ -51,30 +51,33 @@ class AIDraftOrderService:
                 ai_data = json.loads(ai_json_str)
                 
                 # Lưu vào repo (Đảm bảo repo xử lý employee_id và JSON string)
-                return self.draft_repo.create_draft(voice_text, ai_data, employee_id)
+                return self.draft_repo.create_draft(
+                raw_text=voice_text,
+                extracted_json=ai_data,
+                employee_id=employee_id
+)
             except Exception as e:
                     if "429" in str(e) and attempt < 2:
                         time.sleep(5) # Chờ 5 giây rồi thử lại
                         continue
                     raise Exception(f"Lỗi AI: {str(e)}")
 
-    def confirm_and_create_order(self, draft_id, employee_id):
+    def confirm_and_create_order(self, draft_id, employee_id, owner_id=None):
         draft = self.draft_repo.get_by_id(draft_id)
         if not draft:
             raise ValueError("Draft order not found")
 
         ai_data = json.loads(draft.extracted_json)
-        
+
         # Tìm khách hàng theo tên trích xuất được
         customer = self.customer_repo.get_by_name(ai_data.get('customer_name'))
-        
+
         order_payload = {
             "customer_id": customer.customer_id if customer else None,
             "payment_method": ai_data.get('payment_method', 'Cash'),
             "items": []
         }
 
-        # Tìm sản phẩm theo tên trích xuất được
         for item in ai_data.get('items', []):
             product = self.product_repo.get_by_name(item['product_name'])
             if product:
@@ -84,11 +87,13 @@ class AIDraftOrderService:
                     "unit_price": product.base_price,
                     "unit_id": product.unit_id
                 })
-        
+
         if not order_payload['items']:
             raise ValueError("No valid products found in the AI draft")
 
-        result = self.order_service.create_order(order_payload, employee_id)
-        if result: 
+        # Chuyển owner_id xuống OrderService để tạo order đúng context
+        result = self.order_service.create_order(order_payload, employee_id, owner_id=owner_id)
+        if result:
+            # cập nhật trạng thái draft nếu order tạo thành công
             self.draft_repo.update_status(draft_id, "Confirmed")
         return result
