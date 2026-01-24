@@ -2,6 +2,12 @@ import google.generativeai as genai
 import json
 import re
 from config import Config
+import time
+# src/services/ai_core_service/ai_draft_order_service.py
+import google.generativeai as genai
+import json
+import re
+from config import Config
 
 class AIDraftOrderService:
     def __init__(self, draft_repo, order_service, customer_repo, product_repo):
@@ -10,24 +16,47 @@ class AIDraftOrderService:
         self.customer_repo = customer_repo
         self.product_repo = product_repo
         
-        # Kiểm tra API Key trước khi cấu hình
         api_key = getattr(Config, 'GEMINI_API_KEY', None)
         if not api_key:
-            raise ValueError("Missing GEMINI_API_KEY in Config. Please check your .env file.")
+            raise ValueError("Thiếu GEMINI_API_KEY trong file .env")
             
-        genai.configure(api_key=Config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        genai.configure(api_key=api_key)
+        # SỬA TÊN MODEL Ở ĐÂY: Sử dụng gemini-2.0-flash từ danh sách của bạn
+        self.model = genai.GenerativeModel('gemini-flash-latest')
 
     def create_draft_from_voice(self, voice_text, employee_id):
-        prompt = f"Phân tích câu sau thành JSON đơn hàng: '{voice_text}'. Trả về JSON: {{\"customer_name\": string, \"items\": [{{\"product_name\": string, \"quantity\": number}}], \"payment_method\": \"Cash\"|\"Debt\"}}"
-        try:
-            response = self.model.generate_content(prompt)
-            match = re.search(r'\{.*\}', response.text, re.DOTALL)
-            ai_json = match.group(0) if match else "{}"
-            # Lưu vào repo
-            return self.draft_repo.create_draft(employee_id, voice_text, ai_json)
-        except Exception as e:
-            raise Exception(f"AI Error: {str(e)}")
+        # Prompt được tối ưu để AI trả về JSON chuẩn
+        prompt = f"""
+        Phân tích câu lệnh sau thành JSON đơn hàng: '{voice_text}'
+        Yêu cầu trả về DUY NHẤT một khối JSON theo cấu trúc:
+        {{
+            "customer_name": "Tên khách hàng hoặc null",
+            "items": [
+                {{"product_name": "Tên sản phẩm", "quantity": số_lượng}}
+            ],
+            "payment_method": "Cash" hoặc "Debt"
+        }}
+        Lưu ý: Nếu không nhắc đến thanh toán, mặc định là "Cash".
+        """
+        for attempt in range(3):
+            try:
+                response = self.model.generate_content(prompt)
+                
+                # Dùng Regex để bóc tách JSON (phòng trường hợp AI trả về text thừa)
+                match = re.search(r'\{.*\}', response.text, re.DOTALL)
+                if not match:
+                    raise ValueError("AI không thể trích xuất thông tin JSON")
+                
+                ai_json_str = match.group(0)
+                ai_data = json.loads(ai_json_str)
+                
+                # Lưu vào repo (Đảm bảo repo xử lý employee_id và JSON string)
+                return self.draft_repo.create_draft(voice_text, ai_data, employee_id)
+            except Exception as e:
+                    if "429" in str(e) and attempt < 2:
+                        time.sleep(5) # Chờ 5 giây rồi thử lại
+                        continue
+                    raise Exception(f"Lỗi AI: {str(e)}")
 
     def confirm_and_create_order(self, draft_id, employee_id):
         draft = self.draft_repo.get_by_id(draft_id)

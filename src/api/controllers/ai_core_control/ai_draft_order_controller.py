@@ -26,9 +26,12 @@ def post_voice_command(ai_service = Provide[Container.ai_draft_order_service]):
     """
     try:
         data = request.get_json()
-        emp_id = getattr(request, 'current_user_id', None)
+        # Lấy ID người dùng từ token đã decode qua middleware
+        user_info = getattr(request, 'current_user', {})
+        emp_id = user_info.get('user_id') or user_info.get('owner_id')
+        
         result = ai_service.create_draft_from_voice(data.get('voice_content'), emp_id)
-        return jsonify({"draft_id": result.draft_id, "message": "Draft created successfully"}), 201
+        return jsonify({"draft_id": result.draft_id, "message": "Draft created"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -65,8 +68,19 @@ def confirm_draft(draft_id, ai_service = Provide[Container.ai_draft_order_servic
       200: {description: "Đã tạo hóa đơn thật thành công"}
     """
     try:
-        emp_id = getattr(request, 'current_user_id', None)
+        # 1. Lấy ID người dùng đồng bộ với middleware
+        user_info = getattr(request, 'current_user', {})
+        emp_id = user_info.get('user_id') or user_info.get('owner_id')
+        
+        # 2. Gọi service xử lý
         order = ai_service.confirm_and_create_order(draft_id, emp_id)
-        return jsonify({"message": "Order created", "order_id": order.order_id}), 200
+        
+        # 3. Trả về mã 201 nếu tạo mới thành công
+        return jsonify({
+            "message": "Order created successfully", 
+            "order_id": order.order_id
+        }), 201
+        
     except Exception as e:
+        # Trả về lỗi 400 nếu dữ liệu không hợp lệ hoặc logic nghiệp vụ sai
         return jsonify({"error": str(e)}), 400
