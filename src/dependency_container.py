@@ -153,7 +153,7 @@ class Container(containers.DeclarativeContainer):
     inventory_check_service = providers.Factory(InventoryCheckService, repository=inventory_check_repository, product_repository=product_repository)
     debt_service = providers.Factory(DebtService, repository=debt_repository)
     customer_service = providers.Factory(CustomerService, repository=customer_repository)
-    order_service = providers.Factory(OrderService, repository=order_repository, product_repo=product_repository, debt_service=debt_service)
+    order_service = providers.Factory(OrderService,  order_repo=order_repository, product_repo=product_repository, debt_service=debt_service)
     order_detail_service = providers.Factory(OrderDetailService, repository=order_detail_repository)
     payment_service = providers.Factory(PaymentService, payment_repo=payment_repository, debt_repo=debt_repository)
     return_order_service = providers.Factory(ReturnOrderService, repository=return_order_repository, product_repo=product_repository)
