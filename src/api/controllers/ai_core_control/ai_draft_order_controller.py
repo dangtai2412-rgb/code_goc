@@ -1,5 +1,5 @@
 # src/api/controllers/ai_core_control/ai_draft_order_controller.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, json, request, jsonify
 from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
@@ -50,9 +50,10 @@ def get_drafts(ai_service = Provide[Container.ai_draft_order_service]):
     drafts = ai_service.draft_repo.get_pending_drafts()
     return jsonify([{
         "id": d.draft_id,
-        "content": d.recognized_content,
-        "json": d.extracted_json,
-        "time": d.created_at.isoformat()
+        "raw_text": d.raw_text,                 # nội dung gốc (voice/text)
+        "extracted_json": json.loads(d.extracted_json) if d.extracted_json else None,
+        "status": d.status,
+        "created_at": d.created_at.isoformat()
     } for d in drafts]), 200
 
 @ai_draft_order_bp.route('/<int:draft_id>/confirm', methods=['POST'])

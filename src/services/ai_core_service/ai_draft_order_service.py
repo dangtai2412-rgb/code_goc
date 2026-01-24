@@ -73,19 +73,19 @@ class AIDraftOrderService:
         customer = self.customer_repo.get_by_name(ai_data.get('customer_name'))
 
         order_payload = {
-            "customer_id": customer.customer_id if customer else None,
-            "payment_method": ai_data.get('payment_method', 'Cash'),
-            "items": []
-        }
+        "customer_id": customer.customer_id if customer else None,
+        "payment_method": ai_data.get('payment_method', 'Cash'),
+        "details": []   # <-- use 'details' to match OrderService expectation
+    }
 
         for item in ai_data.get('items', []):
-            product = self.product_repo.get_by_name(item['product_name'])
+            product = self.product_repo.get_by_name(item.get('product_name'))
             if product:
-                order_payload['items'].append({
+                order_payload['details'].append({
                     "product_id": product.product_id,
-                    "quantity": item['quantity'],
-                    "unit_price": product.base_price,
-                    "unit_id": product.unit_id
+                    "quantity": item.get('quantity', 0),
+                    "unit_price": getattr(product, 'base_price', item.get('unit_price', 0)),
+                    "unit_id": getattr(product, 'unit_id', None)
                 })
 
         if not order_payload['items']:
