@@ -1,10 +1,12 @@
+# src/cors.py
 from flask_cors import CORS
 
 def init_cors(app):
+    # Thay đổi: origins="*" (chấp nhận mọi nguồn) để tránh bị chặn oan
     CORS(app, resources={
         r"/*": {
-            "origins": ["http://localhost:3000"],  # Cho phép cổng 3000 của Frontend
+            "origins": "*", 
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"]
         }
     })
