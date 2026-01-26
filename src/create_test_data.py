@@ -25,20 +25,20 @@ with app.app_context():
         plan = session.query(SubscriptionPlanModel).filter_by(plan_name="Free Tier").first()
 
     # BƯỚC 1: TẠO CHỦ CỬA HÀNG (BUSINESS OWNER)
-    owner = session.query(BusinessOwnerModel).filter_by(email="boss@bizflow.com").first()
+    owner = session.query(BusinessOwnerModel).filter_by(email="anh@bizflow.com").first()
     
     if not owner:
         new_owner = BusinessOwnerModel(
             owner_name="Chủ Cửa Hàng Demo",
-            email="boss@bizflow.com",
-            password=generate_password_hash("123456"), 
+            email="anh@bizflow.com",
+            password=generate_password_hash("12345678"),
             phone_number="0901234567",
             plan_id=plan.plan_id
         )
         session.add(new_owner)
         session.commit()
         print("✅ 1. Đã tạo Business Owner")
-        owner = session.query(BusinessOwnerModel).filter_by(email="boss@bizflow.com").first()
+        owner = session.query(BusinessOwnerModel).filter_by(email="anh@bizflow.com").first()
     else:
         print("ℹ️ Business Owner đã tồn tại.")
 
@@ -61,7 +61,7 @@ with app.app_context():
                 employee_name="Nhân Viên Test AI", 
                 
                 # Model dùng 'password', không phải 'password_hash'
-                password=generate_password_hash("123456"), 
+                password=generate_password_hash("123456"),
                 
                 owner_id=owner.owner_id,
                 role="Staff",
