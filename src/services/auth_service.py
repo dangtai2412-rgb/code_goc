@@ -17,20 +17,26 @@ class AuthService:
             return token.decode('utf-8')
         return token
 
-    def login(self, email, password):
+    def login(self, email, password, role=None):
         """
         Returns dict: {"token": <jwt>, "user": { "user_id", "owner_id", "role", "exp" } } or raises/returns None on failure.
         """
-        user = self.admin_repo.get_by_email(email)
-        role = "admin"
-
-        if not user:
+        if role == "admin":
+            user = self.admin_repo.get_by_email(email)
+        elif role == "owner":
             user = self.owner_repo.get_by_email(email)
-            role = "owner"
-
-        if not user:
+        elif role == "employee":
             user = self.employee_repo.get_by_email(email)
-            role = "employee"
+        else:
+            # Fallback: Nếu không chọn role thì tự động tìm (như cũ)
+            user = self.admin_repo.get_by_email(email)
+            role = "admin"
+            if not user:
+                user = self.owner_repo.get_by_email(email)
+                role = "owner"
+            if not user:
+                user = self.employee_repo.get_by_email(email)
+                role = "employee"
 
         if not user:
             return None

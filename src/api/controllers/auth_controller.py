@@ -58,11 +58,12 @@ def login_system(auth_service: AuthService = Provide[Container.auth_service]):
         # Thống nhất dùng email làm định danh chính
         email = data.get('email') or data.get('username')
         password = data.get('password')
+        role = data.get('role') # SỬA: Lấy role từ request
 
         if not email or not password:
             return jsonify({"error": "Thiếu email hoặc mật khẩu"}), 400
             
-        result = auth_service.login(email, password)
+        result = auth_service.login(email, password, role)
         
         if result:
             return jsonify(result), 200
