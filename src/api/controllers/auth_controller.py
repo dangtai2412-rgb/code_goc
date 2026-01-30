@@ -53,21 +53,21 @@ def login_system(auth_service: AuthService = Provide[Container.auth_service]):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": "Thiếu dữ liệu đăng nhập"}), 400
+            return jsonify({"error": "Thiếu dữ liệu"}), 400
             
-        # Thống nhất dùng email làm định danh chính
-        email = data.get('email') or data.get('username')
+        email = data.get('email')
         password = data.get('password')
         role = data.get('role') # SỬA: Lấy role từ request
 
         if not email or not password:
-            return jsonify({"error": "Thiếu email hoặc mật khẩu"}), 400
+            return jsonify({"error": "Vui lòng nhập Email và Mật khẩu"}), 400
             
+        # Gọi service kèm theo role
         result = auth_service.login(email, password, role)
         
         if result:
             return jsonify(result), 200
         
-        return jsonify({"error": "Tài khoản hoặc mật khẩu không chính xác"}), 401
+        return jsonify({"error": "Sai thông tin đăng nhập hoặc sai vai trò!"}), 401
     except Exception as e:
         return jsonify({"error": str(e)}), 500

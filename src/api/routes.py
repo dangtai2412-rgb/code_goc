@@ -1,4 +1,4 @@
-# src/api/routes.py
+# Copy đè toàn bộ nội dung file src/api/routes.py
 from api.controllers.access_and_identity_control.business_owner_controller import business_owner_bp
 from api.controllers.access_and_identity_control.employee_controller import employee_bp
 from api.controllers.inventory_control.product_controller import product_bp
@@ -23,16 +23,12 @@ from api.controllers.sale_and_finance_control.return_order_controller import ret
 from api.controllers.inventory_control.inventory_check_controller import inventory_check_bp
 
 def register_routes(app):
-    # ĐỒNG BỘ TẤT CẢ VỀ PREFIX /api
+    # --- QUAN TRỌNG: Thêm url_prefix='/api/...' ---
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    
-    # Access Control
     app.register_blueprint(business_owner_bp, url_prefix='/api/business-owners')
     app.register_blueprint(employee_bp, url_prefix='/api/employees')
     app.register_blueprint(admin_bp, url_prefix='/api/administrators')
     app.register_blueprint(subscription_plan_bp, url_prefix='/api/subscription-plans')
-
-    # Inventory
     app.register_blueprint(product_bp, url_prefix='/api/products')
     app.register_blueprint(category_bp, url_prefix='/api/categories')
     app.register_blueprint(unit_bp, url_prefix='/api/units')
@@ -40,8 +36,6 @@ def register_routes(app):
     app.register_blueprint(stock_import_bp, url_prefix='/api/stock-imports')
     app.register_blueprint(stock_import_detail_bp, url_prefix='/api/stock-import-details')
     app.register_blueprint(inventory_check_bp, url_prefix='/api/inventory-checks')
-
-    # Sales & Finance
     app.register_blueprint(customer_bp, url_prefix='/api/customers')
     app.register_blueprint(order_bp, url_prefix='/api/orders')
     app.register_blueprint(order_detail_bp, url_prefix='/api/order-details')
@@ -50,7 +44,5 @@ def register_routes(app):
     app.register_blueprint(account_report_bp, url_prefix='/api/account-reports')
     app.register_blueprint(expense_bp, url_prefix='/api/expenses')
     app.register_blueprint(return_order_bp, url_prefix='/api/returns')
-
-    # AI
     app.register_blueprint(ai_assistant_bp, url_prefix='/api/ai-assistants')
     app.register_blueprint(ai_draft_order_bp, url_prefix='/api/ai-draft-orders')
