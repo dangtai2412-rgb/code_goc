@@ -43,7 +43,7 @@ def create_new_product(product_service = Provide[Container.product_service]):
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@product_bp.route('/', methods=['GET'])
+@product_bp.route('', methods=['GET'])
 @token_required
 @inject
 def list_products_by_owner(product_service = Provide[Container.product_service]):
