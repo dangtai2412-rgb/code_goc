@@ -1,84 +1,68 @@
-from flask import Blueprint, request, jsonify
-from api.middlewares.auth_middleware import token_required
-from dependency_injector.wiring import inject, Provide
-from dependency_container import Container
-from services.sale_and_finance_service.customer_service import CustomerService
-
-customer_bp = Blueprint('customer_bp', __name__)
-
-def get_owner_id():
-    user_info = getattr(request, 'current_user', {})
-    return user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
-
-# --- 1. LẤY CHI TIẾT KÈM CÔNG NỢ ---
-@customer_bp.route('/<int:id>/summary', methods=['GET'])
+# --- 5. GHI NHẬN TRẢ NỢ (Repayment) ---
+@customer_bp.route('/<int:id>/repayment', methods=['POST'])
 @token_required
 @inject
-def get_customer_summary(id, customer_service: CustomerService = Provide[Container.customer_service]):
-    """ Lấy thông tin chi tiết khách hàng kèm theo tổng nợ hiện tại """
+def record_repayment(id, customer_service: CustomerService = Provide[Container.customer_service]):
+    """ Ghi nhận khách hàng trả nợ (phiếu thu) """
     try:
+        data = request.get_json()
+        amount = data.get('amount', 0)
+        payment_method = data.get('payment_method', 'cash') # cash, transfer
+        
+        if amount <= 0:
+            return jsonify({"error": "Số tiền trả nợ phải lớn hơn 0"}), 400
+            
         owner_id = get_owner_id()
-        # Service sẽ tổng hợp dữ liệu từ bảng Customers và Invoices
-        summary = customer_service.get_customer_financial_summary(id, owner_id)
+        # Cập nhật số dư nợ trong Database
+        repayment_receipt = customer_service.process_repayment(id, owner_id, amount, payment_method)
         
         return jsonify({
             "success": True,
-            "data": summary # Gồm: info, total_bought, total_debt, last_transaction
-        }), 200
+            "message": f"Đã ghi nhận trả nợ {amount}",
+            "receipt_id": repayment_receipt.id,
+            "remaining_debt": repayment_receipt.new_balance
+        }), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 404
+        return jsonify({"error": str(e)}), 400
 
-# --- 2. LỊCH SỬ GIAO DỊCH ---
-@customer_bp.route('/<int:id>/transactions', methods=['GET'])
+# --- 6. PHÂN NHÓM KHÁCH HÀNG (AI Insights) ---
+@customer_bp.route('/segments', methods=['GET'])
 @token_required
 @inject
-def get_customer_transactions(id, customer_service: CustomerService = Provide[Container.customer_service]):
-    """ Lấy lịch sử mua hàng và trả nợ của khách """
+def get_customer_segments(customer_service: CustomerService = Provide[Container.customer_service]):
+    """ 
+    Phân tích hành vi khách hàng bằng AI 
+    Nhóm: VIP, Thường xuyên, Nguy cơ rời bỏ, Nợ khó đòi
+    """
     try:
         owner_id = get_owner_id()
-        page = request.args.get('page', 1, type=int)
-        
-        transactions = customer_service.get_transaction_history(id, owner_id, page)
-        return jsonify(transactions), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# --- 3. TÌM KIẾM NHANH (Phục vụ tại quầy) ---
-@customer_bp.route('/search', methods=['GET'])
-@token_required
-@inject
-def search_customers(customer_service: CustomerService = Provide[Container.customer_service]):
-    """ Tìm nhanh theo tên hoặc số điện thoại """
-    try:
-        owner_id = get_owner_id()
-        query = request.args.get('q', '').strip()
-        
-        if len(query) < 2:
-            return jsonify([]), 200
-            
-        results = customer_service.search_customers(owner_id, query)
-        return jsonify([{
-            "id": c.customer_id,
-            "name": c.customer_name,
-            "phone": c.phone_number,
-            "current_debt": getattr(c, 'total_debt', 0)
-        } for c in results]), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# --- 4. DANH SÁCH KHÁCH NỢ (Debt Management) ---
-@customer_bp.route('/debtors', methods=['GET'])
-@token_required
-@inject
-def get_debtors(customer_service: CustomerService = Provide[Container.customer_service]):
-    """ Lấy danh sách những khách hàng đang nợ, sắp xếp theo số nợ giảm dần """
-    try:
-        owner_id = get_owner_id()
-        debtors = customer_service.get_list_debtors(owner_id)
+        segments = customer_service.get_ai_customer_segments(owner_id)
         
         return jsonify({
-            "total_receivable": sum(d['debt'] for d in debtors),
-            "debtors": debtors
+            "summary": {
+                "total_vip": len(segments.get('vip', [])),
+                "at_risk": len(segments.get('at_risk', []))
+            },
+            "segments": segments
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- 7. TẠO TIN NHẮN NHẮC NỢ (Automation) ---
+@customer_bp.route('/<int:id>/debt-reminder', methods=['GET'])
+@token_required
+@inject
+def get_debt_reminder(id, customer_service: CustomerService = Provide[Container.customer_service]):
+    """ Tạo mẫu tin nhắn nhắc nợ cá nhân hóa """
+    try:
+        owner_id = get_owner_id()
+        # Lấy thông tin nợ và tạo nội dung: "Chào anh A, shop BizFlow gửi thông báo số nợ..."
+        reminder_content = customer_service.generate_debt_reminder(id, owner_id)
+        
+        return jsonify({
+            "customer_phone": reminder_content['phone'],
+            "message": reminder_content['text'],
+            "zalo_link": f"https://zalo.me/{reminder_content['phone']}"
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
