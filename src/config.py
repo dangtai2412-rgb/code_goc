@@ -40,7 +40,7 @@ template = {
     "swagger": "2.0",
     "info": {
         "title": "BizFlow API",
-        "description": "API for managing todos",
+        "description": "API for managing BizFlow business operations",
         "version": "1.0.0"
     },
     "basePath": "/",
