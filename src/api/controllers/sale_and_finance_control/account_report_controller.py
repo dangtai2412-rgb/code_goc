@@ -1,123 +1,84 @@
-# src/api/controllers/sale_and_finance_control/account_report_controller.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from api.middlewares.auth_middleware import token_required
 from services.sale_and_finance_service.account_report_service import AccountReportService
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
+import io
 
 account_report_bp = Blueprint('account_report_bp', __name__)
 
-@account_report_bp.route('/tt88', methods=['GET'])
-@token_required
-@inject
-def get_tt88_report(service: AccountReportService = Provide[Container.account_report_service]):
-    """
-    Lấy báo cáo Sổ chi tiết doanh thu (Thông tư 88)
-    ---
-    tags: [Reports]
-    security: [{BearerAuth: []}]
-    parameters:
-      - name: date
-        in: query
-        type: string
-        required: true
-        description: YYYY-MM-DD
-    responses:
-      200: {description: "Thành công"}
-    """
-    try:
-        # FIXED: Lấy thông tin từ request object (là Dictionary từ JWT)
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
-        
-        report_date = request.args.get('date')
-        
-        if not report_date:
-            return jsonify({"error": "Vui lòng chọn ngày báo cáo (?date=...)"}), 400
-            
-        report_data = service.generate_s1_revenue_ledger(owner_id, report_date, report_date)
-        return jsonify(report_data), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+def get_owner_id():
+    user_info = getattr(request, 'current_user', {})
+    return user_info.get('owner_id') or user_info.get('id')
 
-@account_report_bp.route('/dashboard', methods=['GET'])
-@token_required
-@inject
-def get_dashboard_stats(service: AccountReportService = Provide[Container.account_report_service]):
-    """
-    Lấy thống kê Dashboard (Doanh thu, Đơn hàng, Tồn kho)
-    ---
-    tags: [Reports]
-    security: [{BearerAuth: []}]
-    responses:
-      200: {description: "Thành công"}
-    """
-    try:
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
-        
-        data = service.get_dashboard_stats(owner_id)
-        return jsonify(data), 200
-    except Exception as e:
-        return jsonify({"message": str(e)}), 500
-
-@account_report_bp.route('/chart', methods=['GET'])
-@token_required
-@inject
-def get_chart_data(service: AccountReportService = Provide[Container.account_report_service]):
-    """
-    Lấy dữ liệu biểu đồ doanh thu 7 ngày
-    ---
-    tags: [Reports]
-    security: [{BearerAuth: []}]
-    responses:
-      200: {description: "Thành công"}
-    """
-    try:
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
-        
-        data = service.get_revenue_chart(owner_id)
-        return jsonify(data), 200
-    except Exception as e:
-        return jsonify({"message": str(e)}), 500
-
-@account_report_bp.route('/top-products', methods=['GET'])
-@token_required
-@inject
-def get_top_products(service: AccountReportService = Provide[Container.account_report_service]):
-    """
-    Lấy Top 5 sản phẩm bán chạy
-    ---
-    tags: [Reports]
-    security: [{BearerAuth: []}]
-    responses:
-      200: {description: "Thành công"}
-    """
-    try:
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
-        
-        data = service.get_top_products(owner_id)
-        return jsonify(data), 200
-    except Exception as e:
-        return jsonify({"message": str(e)}), 500
+# --- 1. BÁO CÁO KẾ TOÁN (TT88) ---
 @account_report_bp.route('/tt88/s1', methods=['GET'])
 @token_required
 @inject
 def get_s1_report(service: AccountReportService = Provide[Container.account_report_service]):
-    """Lấy sổ doanh thu S1-HKD theo Thông tư 88"""
+    """ 
+    Sổ chi tiết doanh thu bán hàng hóa, dịch vụ (Mẫu S1-HKD) 
+    Query: ?start_date=...&end_date=...&export=excel
+    """
     try:
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id')
-        
+        owner_id = get_owner_id()
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
-        
+        export_format = request.args.get('export') # 'excel' hoặc None
+
         if not start_date or not end_date:
-            return jsonify({"error": "Thiếu start_date hoặc end_date (YYYY-MM-DD)"}), 400
-            
+            return jsonify({"error": "Vui lòng chọn khoảng thời gian báo cáo"}), 400
+
+        # Nếu yêu cầu xuất file Excel cho kế toán
+        if export_format == 'excel':
+            excel_data = service.export_s1_to_excel(owner_id, start_date, end_date)
+            return send_file(
+                io.BytesIO(excel_data),
+                as_attachment=True,
+                download_name=f"So_S1_DoanhThu_{start_date}_den_{end_date}.xlsx",
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+
         report = service.generate_s1_revenue_ledger(owner_id, start_date, end_date)
         return jsonify(report), 200
+    except Exception as e:
+        return jsonify({"error": f"Lỗi tạo báo cáo: {str(e)}"}), 500
+
+# --- 2. THỐNG KÊ DASHBOARD (KPIs) ---
+@account_report_bp.route('/dashboard', methods=['GET'])
+@token_required
+@inject
+def get_dashboard_stats(service: AccountReportService = Provide[Container.account_report_service]):
+    """ Thống kê tổng quan: Doanh thu, Lợi nhuận, Đơn hàng """
+    try:
+        owner_id = get_owner_id()
+        # Cho phép filter theo range (today, this_month, last_30_days)
+        period = request.args.get('period', 'this_month')
+        
+        data = service.get_dashboard_stats(owner_id, period)
+        return jsonify({
+            "success": True,
+            "period": period,
+            "summary": data
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- 3. BIỂU ĐỒ & TOP SẢN PHẨM ---
+@account_report_bp.route('/analytics', methods=['GET'])
+@token_required
+@inject
+def get_combined_analytics(service: AccountReportService = Provide[Container.account_report_service]):
+    """ Gộp dữ liệu biểu đồ và top sản phẩm để giảm số lần gọi API từ Mobile/Web """
+    try:
+        owner_id = get_owner_id()
+        
+        revenue_chart = service.get_revenue_chart(owner_id)
+        top_products = service.get_top_products(owner_id)
+        
+        return jsonify({
+            "charts": revenue_chart,
+            "top_selling": top_products
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
