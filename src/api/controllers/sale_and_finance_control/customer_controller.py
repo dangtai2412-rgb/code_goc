@@ -1,4 +1,3 @@
-# src/api/controllers/sale_and_finance_control/customer_controller.py
 from flask import Blueprint, request, jsonify
 from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
@@ -7,117 +6,79 @@ from services.sale_and_finance_service.customer_service import CustomerService
 
 customer_bp = Blueprint('customer_bp', __name__)
 
-@customer_bp.route('/', methods=['POST'])
+def get_owner_id():
+    user_info = getattr(request, 'current_user', {})
+    return user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+
+# --- 1. LẤY CHI TIẾT KÈM CÔNG NỢ ---
+@customer_bp.route('/<int:id>/summary', methods=['GET'])
 @token_required
 @inject
-def add_new_customer(customer_service: CustomerService = Provide[Container.customer_service]):
-    """
-    Tạo khách hàng mới
-    ---
-    tags: [Customer]
-    security: [{BearerAuth: []}]
-    parameters:
-      - in: body
-        name: body
-        schema:
-          required: [customer_name, phone_number]
-          properties:
-            customer_name: {type: string}
-            phone_number: {type: string}
-            address: {type: string}
-            email: {type: string}
-    responses:
-      201: {description: Thành công}
-    """
+def get_customer_summary(id, customer_service: CustomerService = Provide[Container.customer_service]):
+    """ Lấy thông tin chi tiết khách hàng kèm theo tổng nợ hiện tại """
     try:
-        data = request.get_json()
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+        owner_id = get_owner_id()
+        # Service sẽ tổng hợp dữ liệu từ bảng Customers và Invoices
+        summary = customer_service.get_customer_financial_summary(id, owner_id)
         
-        if not owner_id:
-            return jsonify({"error": "Token thiếu owner_id"}), 401
-
-        # SỬA: Truyền data VÀ owner_id tách biệt
-        result = customer_service.create_customer(data, owner_id)
-        return jsonify({"message": "Thành công", "id": result.customer_id}), 201
+        return jsonify({
+            "success": True,
+            "data": summary # Gồm: info, total_bought, total_debt, last_transaction
+        }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 404
 
-@customer_bp.route('/', methods=['GET'])
+# --- 2. LỊCH SỬ GIAO DỊCH ---
+@customer_bp.route('/<int:id>/transactions', methods=['GET'])
 @token_required
 @inject
-def get_all_customers(customer_service: CustomerService = Provide[Container.customer_service]):
-    """
-    Lấy danh sách khách hàng
-    ---
-    tags: [Customer]
-    security:
-      - BearerAuth: []
-    responses:
-      200:
-        description: Danh sách khách hàng của shop hiện tại
-        schema:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-                example: 1
-              name:
-                type: string
-                example: "Nguyen Van A"
-              phone:
-                type: string
-                example: "0912345678"
-              address:
-                type: string
-                example: "123 Đường ABC"
-      401:
-        description: Token không hợp lệ hoặc hết hạn
-    """
+def get_customer_transactions(id, customer_service: CustomerService = Provide[Container.customer_service]):
+    """ Lấy lịch sử mua hàng và trả nợ của khách """
     try:
-        # FIXED: Xóa current_user khỏi tham số và lấy từ request
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+        owner_id = get_owner_id()
+        page = request.args.get('page', 1, type=int)
         
-        customers = customer_service.get_all_customers(owner_id)
-        return jsonify([{
-            "id": c.customer_id, 
-            "name": c.customer_name, 
-            "phone": c.phone_number,
-            "address": c.address
-        } for c in customers]), 200
+        transactions = customer_service.get_transaction_history(id, owner_id, page)
+        return jsonify(transactions), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@customer_bp.route('/<int:id>', methods=['PUT'])
+# --- 3. TÌM KIẾM NHANH (Phục vụ tại quầy) ---
+@customer_bp.route('/search', methods=['GET'])
 @token_required
 @inject
-def update_customer(id, customer_service: CustomerService = Provide[Container.customer_service]):
-    """Cập nhật khách hàng"""
+def search_customers(customer_service: CustomerService = Provide[Container.customer_service]):
+    """ Tìm nhanh theo tên hoặc số điện thoại """
     try:
-        data = request.get_json()
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+        owner_id = get_owner_id()
+        query = request.args.get('q', '').strip()
         
-        # TRUYỀN THÊM owner_id
-        customer_service.update_customer(id, data, owner_id)
-        return jsonify({"message": "Cập nhật thành công"}), 200
+        if len(query) < 2:
+            return jsonify([]), 200
+            
+        results = customer_service.search_customers(owner_id, query)
+        return jsonify([{
+            "id": c.customer_id,
+            "name": c.customer_name,
+            "phone": c.phone_number,
+            "current_debt": getattr(c, 'total_debt', 0)
+        } for c in results]), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
-@customer_bp.route('/<int:id>', methods=['DELETE'])
+# --- 4. DANH SÁCH KHÁCH NỢ (Debt Management) ---
+@customer_bp.route('/debtors', methods=['GET'])
 @token_required
 @inject
-def delete_customer(id, customer_service = Provide[Container.customer_service]):
-    """Xóa khách hàng"""
+def get_debtors(customer_service: CustomerService = Provide[Container.customer_service]):
+    """ Lấy danh sách những khách hàng đang nợ, sắp xếp theo số nợ giảm dần """
     try:
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+        owner_id = get_owner_id()
+        debtors = customer_service.get_list_debtors(owner_id)
         
-        # TRUYỀN THÊM owner_id
-        customer_service.delete_customer(id, owner_id)
-        return jsonify({"message": "Xóa thành công"}), 200
+        return jsonify({
+            "total_receivable": sum(d['debt'] for d in debtors),
+            "debtors": debtors
+        }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
