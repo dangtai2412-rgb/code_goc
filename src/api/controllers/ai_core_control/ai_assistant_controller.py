@@ -5,68 +5,69 @@ from dependency_container import Container
 
 ai_assistant_bp = Blueprint('ai_assistant_bp', __name__)
 
-# --- 1. CẬP NHẬT CẤU HÌNH (Chỉ Super Admin) ---
-@ai_assistant_bp.route('/settings', methods=['POST'])
+# --- 4. CHAT VỚI AI ASSISTANT ---
+@ai_assistant_bp.route('/ask', methods=['POST'])
 @token_required
 @inject
-def update_settings(ai_service: any = Provide[Container.ai_assistant_service]):
+def ask_ai(ai_service: any = Provide[Container.ai_assistant_service]):
     """
-    Cập nhật cấu hình model AI (Dành cho Admin hệ thống)
+    Gửi câu hỏi cho AI để hỗ trợ quản lý cửa hàng
+    Body: { "prompt": "Tháng này mặt hàng nào bán chạy nhất?" }
     """
     try:
-        # BẢO MẬT: Chỉ Admin mới được đổi cấu hình AI
-        user_info = getattr(request, 'current_user', {})
-        if user_info.get('role') != 'admin':
-            return jsonify({"error": "Bạn không có quyền thay đổi cấu hình hệ thống AI"}), 403
-
+        current_user = getattr(request, 'current_user', {})
+        owner_id = current_user.get('id')
         data = request.get_json()
-        if not data or 'model_type' not in data:
-            return jsonify({"error": "Thiếu thông tin model_type"}), 400
+        prompt = data.get('prompt')
 
-        # GỢI Ý: Thêm danh sách model được phép để tránh lỗi chính tả
-        allowed_models = ["gemini-1.5-flash", "gemini-1.5-pro", "gpt-4o"]
-        if data['model_type'] not in allowed_models:
-            return jsonify({"error": f"Model không hỗ trợ. Cho phép: {allowed_models}"}), 400
+        if not prompt:
+            return jsonify({"error": "Nội dung câu hỏi không được trống"}), 400
 
-        ai_service.update_ai_settings(data)
-        return jsonify({"message": "Cấu hình AI đã được cập nhật thành công"}), 200
+        # KIỂM TRA ĐỊNH MỨC (Usage Quota)
+        # Gợi ý: Mỗi shop gói Basic chỉ được hỏi 50 câu/tháng
+        can_ask = ai_service.check_usage_limit(owner_id)
+        if not can_ask:
+            return jsonify({"error": "Bạn đã hết lượt sử dụng AI tháng này. Hãy nâng cấp gói cước!"}), 429
+
+        # AI Service sẽ lấy dữ liệu từ DB của Owner và gửi kèm Prompt cho LLM
+        response = ai_service.process_ai_query(owner_id, prompt)
         
+        return jsonify({
+            "answer": response,
+            "usage": ai_service.get_user_usage_stats(owner_id)
+        }), 200
     except Exception as e:
-        return jsonify({"error": f"Lỗi cập nhật: {str(e)}"}), 500
+        return jsonify({"error": f"AI Assistant đang bận: {str(e)}"}), 500
 
-
-# --- 2. LẤY CẤU HÌNH HIỆN TẠI ---
-@ai_assistant_bp.route('/config', methods=['GET'])
+# --- 5. TỰ ĐỘNG PHÂN TÍCH KINH DOANH (Insights) ---
+@ai_assistant_bp.route('/insights', methods=['GET'])
 @token_required
 @inject
-def get_config(ai_service: any = Provide[Container.ai_assistant_service]):
-    """
-    Lấy cấu hình AI hiện tại
-    """
+def get_business_insights(ai_service: any = Provide[Container.ai_assistant_service]):
+    """ AI tự động đọc dữ liệu doanh thu và đưa ra nhận xét """
     try:
-        config = ai_service.get_current_config()
-        if not config:
-            return jsonify({"message": "Chưa có cấu hình AI"}), 404
-
+        owner_id = getattr(request, 'current_user', {}).get('id')
+        
+        # Service sẽ tổng hợp data doanh thu tuần/tháng rồi nhờ AI phân tích
+        insights = ai_service.generate_business_report(owner_id)
+        
         return jsonify({
-            "version": getattr(config, 'version', 'N/A'),
-            "model_type": getattr(config, 'ai_model_type', 'N/A'),
-            "updated_at": getattr(config, 'updated_at', None)
+            "owner_id": owner_id,
+            "insights": insights, # Ví dụ: "Doanh thu tăng 10%, nhưng mặt hàng A đang tồn kho quá nhiều..."
+            "generated_at": "2024-05-20T10:00:00Z"
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-# --- 3. TEST KẾT NỐI AI (Tính năng mới nên có) ---
-@ai_assistant_bp.route('/test-connection', methods=['GET'])
+# --- 6. XÓA LỊCH SỬ CHAT ---
+@ai_assistant_bp.route('/history', methods=['DELETE'])
 @token_required
 @inject
-def test_ai_connection(ai_service: any = Provide[Container.ai_assistant_service]):
-    """ Kiểm tra xem API Key của AI có còn hoạt động không """
+def clear_chat_history(ai_service: any = Provide[Container.ai_assistant_service]):
+    """ Xóa toàn bộ ngữ cảnh (context) cũ để AI bắt đầu phiên làm việc mới """
     try:
-        is_alive = ai_service.check_api_status() # Bạn cần viết hàm này trong Service
-        if is_alive:
-            return jsonify({"status": "AI is online", "latency": "200ms"}), 200
-        return jsonify({"status": "AI is unreachable"}), 503
+        owner_id = getattr(request, 'current_user', {}).get('id')
+        ai_service.clear_history(owner_id)
+        return jsonify({"message": "Lịch sử trò chuyện đã được xóa"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
