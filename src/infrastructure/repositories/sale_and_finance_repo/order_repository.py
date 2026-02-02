@@ -1,19 +1,24 @@
+# src/infrastructure/repositories/sale_and_finance_repo/order_repository.py
+from infrastructure.repositories.base_repository import BaseRepository
 from infrastructure.models.sale_and_finance.order_model import OrderModel
-from infrastructure.models.inventory.product_model import ProductModel
-from infrastructure.databases.mssql import session
-class OrderRepository:
-    def __init__(self, db_session=session):
-        self.session = db_session
 
-    def add(self, order_model):
-        """Chỉ thực hiện lưu, không chứa logic trừ kho"""
-        try:
-            self.session.add(order_model)
-            # Không commit ở đây để Service quản lý Transaction
-            return order_model
-        except Exception as e:
-            self.session.rollback()
-            raise e
-    def get_all_by_owner(self, owner_id):
-        # Lấy toàn bộ đơn hàng của chủ shop, sắp xếp theo ngày mới nhất
-        return self.session.query(OrderModel).filter_by(owner_id=owner_id).order_by(OrderModel.order_date.desc()).all()
+class OrderRepository(BaseRepository):
+    def __init__(self, db_session):
+        super().__init__(OrderModel, db_session)
+
+    def get_orders_by_owner(self, owner_id):
+        return self.model.query.filter_by(owner_id=owner_id).order_by(self.model.created_at.desc()).all()
+
+    # --- THÊM HÀM NÀY ---
+    def get_all_pagination(self, owner_id, limit, offset):
+        """Lấy danh sách đơn hàng có phân trang"""
+        query = self.session.query(self.model).filter_by(owner_id=owner_id)
+        
+        # Đếm tổng số bản ghi để Frontend biết có bao nhiêu trang
+        total = query.count()
+        
+        # Lấy dữ liệu trang hiện tại
+        items = query.order_by(self.model.order_id.desc()).limit(limit).offset(offset).all()
+        
+        return items, total
+    
