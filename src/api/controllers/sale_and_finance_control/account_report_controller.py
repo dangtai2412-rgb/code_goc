@@ -11,74 +11,74 @@ def get_owner_id():
     user_info = getattr(request, 'current_user', {})
     return user_info.get('owner_id') or user_info.get('id')
 
-# --- 1. BÁO CÁO KẾ TOÁN (TT88) ---
-@account_report_bp.route('/tt88/s1', methods=['GET'])
+# --- 1. SỔ DOANH THU (S1) & SỔ KHO (S2) ---
+@account_report_bp.route('/tt88/<report_type>', methods=['GET'])
 @token_required
 @inject
-def get_s1_report(service: AccountReportService = Provide[Container.account_report_service]):
+def get_accounting_reports(report_type, service: AccountReportService = Provide[Container.account_report_service]):
     """ 
-    Sổ chi tiết doanh thu bán hàng hóa, dịch vụ (Mẫu S1-HKD) 
-    Query: ?start_date=...&end_date=...&export=excel
+    Hỗ trợ cả S1 (Doanh thu) và S2 (Nhập Xuất Tồn)
+    URL: /tt88/s1 hoặc /tt88/s2
     """
     try:
         owner_id = get_owner_id()
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
-        export_format = request.args.get('export') # 'excel' hoặc None
+        export = request.args.get('export')
 
         if not start_date or not end_date:
-            return jsonify({"error": "Vui lòng chọn khoảng thời gian báo cáo"}), 400
+            return jsonify({"error": "Thiếu khoảng thời gian báo cáo"}), 400
 
-        # Nếu yêu cầu xuất file Excel cho kế toán
-        if export_format == 'excel':
-            excel_data = service.export_s1_to_excel(owner_id, start_date, end_date)
+        if report_type not in ['s1', 's2']:
+            return jsonify({"error": "Loại báo cáo không hợp lệ"}), 404
+
+        # Xử lý xuất Excel
+        if export == 'excel':
+            excel_data = service.export_report_to_excel(report_type, owner_id, start_date, end_date)
             return send_file(
                 io.BytesIO(excel_data),
                 as_attachment=True,
-                download_name=f"So_S1_DoanhThu_{start_date}_den_{end_date}.xlsx",
+                download_name=f"Bao_cao_{report_type}_{start_date}.xlsx",
                 mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
 
-        report = service.generate_s1_revenue_ledger(owner_id, start_date, end_date)
-        return jsonify(report), 200
+        # Trả về JSON cho Web/App hiển thị
+        report_data = service.generate_report_data(report_type, owner_id, start_date, end_date)
+        return jsonify(report_data), 200
     except Exception as e:
-        return jsonify({"error": f"Lỗi tạo báo cáo: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
-# --- 2. THỐNG KÊ DASHBOARD (KPIs) ---
+# --- 2. DASHBOARD VỚI TÍNH TOÁN TĂNG TRƯỞNG ---
 @account_report_bp.route('/dashboard', methods=['GET'])
 @token_required
 @inject
-def get_dashboard_stats(service: AccountReportService = Provide[Container.account_report_service]):
-    """ Thống kê tổng quan: Doanh thu, Lợi nhuận, Đơn hàng """
+def get_dashboard_summary(service: AccountReportService = Provide[Container.account_report_service]):
+    """ Thống kê kèm theo % tăng trưởng so với kỳ trước """
     try:
         owner_id = get_owner_id()
-        # Cho phép filter theo range (today, this_month, last_30_days)
+        # Mặc định lấy theo tháng hiện tại
         period = request.args.get('period', 'this_month')
         
-        data = service.get_dashboard_stats(owner_id, period)
+        # Service sẽ trả về: { "total_revenue": 100M, "growth_rate": 15.5, ... }
+        stats = service.get_dashboard_with_growth(owner_id, period)
+        
         return jsonify({
             "success": True,
-            "period": period,
-            "summary": data
+            "data": stats
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- 3. BIỂU ĐỒ & TOP SẢN PHẨM ---
-@account_report_bp.route('/analytics', methods=['GET'])
+# --- 3. PHÂN TÍCH SÂU (BI Analytics) ---
+@account_report_bp.route('/analytics/revenue-structure', methods=['GET'])
 @token_required
 @inject
-def get_combined_analytics(service: AccountReportService = Provide[Container.account_report_service]):
-    """ Gộp dữ liệu biểu đồ và top sản phẩm để giảm số lần gọi API từ Mobile/Web """
+def get_revenue_structure(service: AccountReportService = Provide[Container.account_report_service]):
+    """ Phân tích cơ cấu doanh thu theo danh mục sản phẩm hoặc phương thức thanh toán """
     try:
         owner_id = get_owner_id()
-        
-        revenue_chart = service.get_revenue_chart(owner_id)
-        top_products = service.get_top_products(owner_id)
-        
-        return jsonify({
-            "charts": revenue_chart,
-            "top_selling": top_products
-        }), 200
+        # Giúp chủ shop biết họ thu tiền mặt nhiều hay chuyển khoản nhiều
+        structure = service.get_payment_method_distribution(owner_id)
+        return jsonify(structure), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
