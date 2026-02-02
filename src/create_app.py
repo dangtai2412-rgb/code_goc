@@ -9,6 +9,11 @@ from dependency_container import Container
 from flasgger import Swagger
 
 def create_app():
+    """
+Factory function to create and configure the Flask application.
+Returns:
+    Flask app instance
+"""
     app = Flask(__name__)
     app.config.from_object(Config)
     

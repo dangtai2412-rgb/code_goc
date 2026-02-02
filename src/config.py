@@ -10,7 +10,7 @@ except ImportError:
 
 load_dotenv()
 
-class Config:
+class Config :
     """Base configuration."""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'a_default_secret_key'
     DEBUG = os.environ.get('DEBUG', 'False').lower() in ['true', '1']
