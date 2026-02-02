@@ -1,9 +1,10 @@
-# src/api/controllers/sale_and_finance_control/customer_controller.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
 from services.sale_and_finance_service.customer_service import CustomerService
+from api.schemas.customer import CustomerRequestSchema, CustomerResponseSchema
+from api.responses import success_response
 
 customer_bp = Blueprint('customer_bp', __name__)
 
@@ -19,29 +20,37 @@ def add_new_customer(customer_service: CustomerService = Provide[Container.custo
     parameters:
       - in: body
         name: body
+        required: true
         schema:
-          required: [customer_name, phone_number]
-          properties:
-            customer_name: {type: string}
-            phone_number: {type: string}
-            address: {type: string}
-            email: {type: string}
+          $ref: '#/definitions/CustomerRequest'
     responses:
-      201: {description: Thành công}
+      201:
+        description: Tạo thành công
+        schema:
+          $ref: '#/definitions/CustomerResponse'
     """
-    try:
-        data = request.get_json()
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
-        
-        if not owner_id:
-            return jsonify({"error": "Token thiếu owner_id"}), 401
+    json_data = request.get_json()
+    
+    # Lấy Owner ID từ Token
+    user_info = request.current_user
+    owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+    
+    # Inject owner_id để pass Schema validation
+    json_data['owner_id'] = owner_id
 
-        # SỬA: Truyền data VÀ owner_id tách biệt
-        result = customer_service.create_customer(data, owner_id)
-        return jsonify({"message": "Thành công", "id": result.customer_id}), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    # Validate
+    schema = CustomerRequestSchema()
+    validated_data = schema.load(json_data)
+    
+    # Call Service
+    result = customer_service.create_customer(validated_data, owner_id)
+    
+    # Response
+    return success_response(
+        data=CustomerResponseSchema().dump(result), 
+        message="Thêm khách hàng thành công", 
+        status_code=201
+    )
 
 @customer_bp.route('/', methods=['GET'])
 @token_required
@@ -51,73 +60,45 @@ def get_all_customers(customer_service: CustomerService = Provide[Container.cust
     Lấy danh sách khách hàng
     ---
     tags: [Customer]
-    security:
-      - BearerAuth: []
+    security: [{BearerAuth: []}]
     responses:
       200:
-        description: Danh sách khách hàng của shop hiện tại
+        description: OK
         schema:
           type: array
           items:
-            type: object
-            properties:
-              id:
-                type: integer
-                example: 1
-              name:
-                type: string
-                example: "Nguyen Van A"
-              phone:
-                type: string
-                example: "0912345678"
-              address:
-                type: string
-                example: "123 Đường ABC"
-      401:
-        description: Token không hợp lệ hoặc hết hạn
+            $ref: '#/definitions/CustomerResponse'
     """
-    try:
-        # FIXED: Xóa current_user khỏi tham số và lấy từ request
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
-        
-        customers = customer_service.get_all_customers(owner_id)
-        return jsonify([{
-            "id": c.customer_id, 
-            "name": c.customer_name, 
-            "phone": c.phone_number,
-            "address": c.address
-        } for c in customers]), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    user_info = request.current_user
+    owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
+    
+    customers = customer_service.get_all_customers(owner_id)
+    
+    return success_response(data=CustomerResponseSchema(many=True).dump(customers))
 
 @customer_bp.route('/<int:id>', methods=['PUT'])
 @token_required
 @inject
 def update_customer(id, customer_service: CustomerService = Provide[Container.customer_service]):
     """Cập nhật khách hàng"""
-    try:
-        data = request.get_json()
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
-        
-        # TRUYỀN THÊM owner_id
-        customer_service.update_customer(id, data, owner_id)
-        return jsonify({"message": "Cập nhật thành công"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    # Lưu ý: Với PUT, có thể dùng schema load(partial=True) nếu chỉ update một vài trường
+    json_data = request.get_json()
+    
+    # Logic update thường service sẽ xử lý
+    user_info = request.current_user
+    owner_id = user_info.get('owner_id') or user_info.get('user_id')
+    
+    customer_service.update_customer(id, json_data, owner_id)
+    
+    return success_response(data=None, message="Cập nhật thành công")
 
 @customer_bp.route('/<int:id>', methods=['DELETE'])
 @token_required
 @inject
-def delete_customer(id, customer_service = Provide[Container.customer_service]):
+def delete_customer(id, customer_service: CustomerService = Provide[Container.customer_service]):
     """Xóa khách hàng"""
-    try:
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
-        
-        # TRUYỀN THÊM owner_id
-        customer_service.delete_customer(id, owner_id)
-        return jsonify({"message": "Xóa thành công"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    user_info = request.current_user
+    owner_id = user_info.get('owner_id') or user_info.get('user_id')
+    
+    customer_service.delete_customer(id, owner_id)
+    return success_response(data=None, message="Xóa thành công")
