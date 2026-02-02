@@ -12,6 +12,7 @@ app = create_app()
 init_cors(app)
 
 if __name__ == '__main__':
+    # Print link for easy access in local development
     # Chạy trên port bạn mong muốn (ví dụ 9999 như file cũ của bạn)
     app.run(host='0.0.0.0', port=9999, debug=True)
 

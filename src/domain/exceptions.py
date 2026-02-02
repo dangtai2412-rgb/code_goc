@@ -25,3 +25,5 @@ class ConflictException(CustomException):
     def __init__(self, message="Conflict occurred"):
         self.message = message
         super().__init__(self.message)
+       ## class DomainError(Exception):
+    """Base exception class for all business logic errors."""
