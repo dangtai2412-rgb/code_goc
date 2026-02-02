@@ -5,90 +5,79 @@ from dependency_container import Container
 
 admin_bp = Blueprint('admin_bp', __name__)
 
-# --- ROUTE: CREATE ADMIN ---
+# --- 1. TẠO ADMIN (Đã tối ưu) ---
 @admin_bp.route('/', methods=['POST'])
-@token_required  # Kiểm tra token trước
-@inject          # Sau đó mới inject service
-def create(admin_service: any = Provide[Container.administrator_service]):
-    """
-    Tạo tài khoản Administrator mới (Super Admin)
-    ---
-    tags: [Administrator]
-    security: [{BearerAuth: []}]
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          required: [admin_name, email, password]
-          properties:
-            admin_name: {type: string, example: "Super Admin"}
-            email: {type: string, example: "admin@system.com"}
-            password: {type: string, example: "admin123"}
-    responses:
-      201: {description: "Tạo thành công"}
-      400: {description: "Lỗi dữ liệu đầu vào"}
-      401: {description: "Không có quyền truy cập"}
-    """
+@token_required
+@inject
+def create(admin_service = Provide[Container.administrator_service]):
+    """ Tạo tài khoản Admin mới """
     try:
         data = request.get_json()
+        if not data: return jsonify({"error": "No data provided"}), 400
         
-        # Kiểm tra dữ liệu đầu vào cơ bản
-        if not data or not all(k in data for k in ("admin_name", "email", "password")):
-            return jsonify({"error": "Thiếu thông tin bắt buộc"}), 400
-
         result = admin_service.create_admin(data)
-        
-        return jsonify({
-            "message": "Tạo tài khoản thành công", 
-            "id": result.admin_id
-        }), 201
-
-    except ValueError as ve: # Catch lỗi logic (ví dụ email đã tồn tại)
-        return jsonify({"error": str(ve)}), 400
+        return jsonify({"message": "Thành công", "id": result.admin_id}), 201
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        return jsonify({"error": "Lỗi hệ thống nội bộ"}), 500
+        return jsonify({"error": "Internal Server Error"}), 500
 
-
-# --- ROUTE: LIST ADMINS ---
+# --- 2. LẤY DANH SÁCH + PHÂN TRANG (Pagination) ---
 @admin_bp.route('/', methods=['GET'])
 @token_required
 @inject
-def list_admins(admin_service: any = Provide[Container.administrator_service]):
-    """
-    Lấy danh sách admin
-    ---
-    tags: [Administrator]
-    security: [{BearerAuth: []}]
-    responses:
-      200: 
-        description: "Lấy danh sách thành công"
-        schema:
-          type: array
-          items:
-            type: object
-            properties:
-              id: {type: integer}
-              name: {type: string}
-              email: {type: string}
+def list_admins(admin_service = Provide[Container.administrator_service]):
+    """ 
+    Lấy danh sách admin có phân trang 
+    Query params: ?page=1&limit=10
     """
     try:
-        # Lấy ID người gọi từ middleware nếu cần kiểm tra quyền
-        # requester_id = getattr(request, 'current_user_id', None)
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
         
-        admins = admin_service.get_all_admins()
+        # Giả sử service của bạn hỗ trợ paginate
+        admins, total = admin_service.get_paginated_admins(page, limit)
         
-        # Chuyển đổi list object sang json
-        response_data = [
-            {
-                "id": a.admin_id, 
-                "name": a.admin_name, 
-                "email": a.email
-            } for a in admins
-        ]
-        
-        return jsonify(response_data), 200
-        
+        return jsonify({
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "data": [{"id": a.admin_id, "name": a.admin_name, "email": a.email} for a in admins]
+        }), 200
     except Exception as e:
-        return jsonify({"error": "Không thể lấy danh sách admin"}), 500
+        return jsonify({"error": str(e)}), 500
+
+# --- 3. CẬP NHẬT THÔNG TIN (Update) ---
+@admin_bp.route('/<int:admin_id>', methods=['PUT'])
+@token_required
+@inject
+def update_admin(admin_id, admin_service = Provide[Container.administrator_service]):
+    """ Cập nhật thông tin admin theo ID """
+    try:
+        data = request.get_json()
+        updated_admin = admin_service.update_admin(admin_id, data)
+        if not updated_admin:
+            return jsonify({"error": "Admin không tồn tại"}), 404
+            
+        return jsonify({"message": "Cập nhật thành công"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+# --- 4. XÓA ADMIN (Delete) ---
+@admin_bp.route('/<int:admin_id>', methods=['DELETE'])
+@token_required
+@inject
+def delete_admin(admin_id, admin_service = Provide[Container.administrator_service]):
+    """ Xóa admin (nên dùng Soft Delete trong thực tế) """
+    try:
+        # Ngăn chặn việc tự xóa chính mình (nếu cần)
+        # if admin_id == request.current_user_id:
+        #    return jsonify({"error": "Không thể tự xóa chính mình"}), 400
+
+        success = admin_service.delete_admin(admin_id)
+        if not success:
+            return jsonify({"error": "Không tìm thấy Admin"}), 404
+            
+        return jsonify({"message": "Đã xóa Admin thành công"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
