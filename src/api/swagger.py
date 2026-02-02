@@ -20,7 +20,7 @@ spec.components.schema("BusinessOwnerResponse", schema=BusinessOwnerResponseSche
 
 from api.schemas.administrator import AdministratorRequestSchema, AdministratorResponseSchema
 
-# Thêm vào đoạn cuối file swagger.py
+# Administrator module schemas
 spec.components.schema("AdministratorRequest", schema=AdministratorRequestSchema)
 spec.components.schema("AdministratorResponse", schema=AdministratorResponseSchema)
 
