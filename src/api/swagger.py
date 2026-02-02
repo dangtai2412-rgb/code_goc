@@ -84,10 +84,3 @@ spec.components.schema("AIAssistantResponse", schema=AIAssistantResponseSchema)
 from api.schemas.ai_draft_order import AIDraftOrderRequestSchema, AIDraftOrderResponseSchema
 spec.components.schema("AIDraftOrderRequest", schema=AIDraftOrderRequestSchema)
 spec.components.schema("AIDraftOrderResponse", schema=AIDraftOrderResponseSchema)
-
-
-
-
-
-
-

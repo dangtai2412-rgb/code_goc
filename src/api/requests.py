@@ -1,38 +1,74 @@
-# requests.py
+from flask import request
+from api.responses import (
+    success_response,
+    error_response,
+    validation_error_response
+)
 
-from flask import request, jsonify
 
 def get_request_data():
-    """Extracts and returns JSON data from the request."""
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
-    return data
+    if not request.is_json:
+        return None, error_response("Request must be JSON", 415)
+
+    data = request.get_json(silent=True)
+
+    if data is None:
+        return None, error_response("Invalid JSON body", 400)
+
+    return data, None
+
 
 def validate_request_schema(schema):
-    """Validates the incoming request data against the provided schema."""
-    data = get_request_data()
+    data, error = get_request_data()
+
+    if error:
+        return None, error
+
     errors = schema.validate(data)
+
     if errors:
-        return jsonify({"errors": errors}), 400
-    return data
+        return None, validation_error_response(errors)
 
-def handle_get_request():
-    """Handles GET requests."""
-    # Logic for handling GET requests goes here
-    pass
+    return data, None
 
-def handle_post_request():
-    """Handles POST requests."""
-    # Logic for handling POST requests goes here
-    pass
 
-def handle_put_request():
-    """Handles PUT requests."""
-    # Logic for handling PUT requests goes here
-    pass
+def handle_get_request(service_func, *args, **kwargs):
+    try:
+        result = service_func(*args, **kwargs)
+        return success_response(result)
+    except Exception as e:
+        return error_response(str(e), 500)
 
-def handle_delete_request():
-    """Handles DELETE requests."""
-    # Logic for handling DELETE requests goes here
-    pass
+
+def handle_post_request(service_func, schema, *args, **kwargs):
+    data, error = validate_request_schema(schema)
+
+    if error:
+        return error
+
+    try:
+        result = service_func(data, *args, **kwargs)
+        return success_response(result, status_code=201)
+    except Exception as e:
+        return error_response(str(e), 500)
+
+
+def handle_put_request(service_func, schema, *args, **kwargs):
+    data, error = validate_request_schema(schema)
+
+    if error:
+        return error
+
+    try:
+        result = service_func(data, *args, **kwargs)
+        return success_response(result)
+    except Exception as e:
+        return error_response(str(e), 500)
+
+
+def handle_delete_request(service_func, *args, **kwargs):
+    try:
+        result = service_func(*args, **kwargs)
+        return success_response(result, message="Deleted successfully")
+    except Exception as e:
+        return error_response(str(e), 500)
