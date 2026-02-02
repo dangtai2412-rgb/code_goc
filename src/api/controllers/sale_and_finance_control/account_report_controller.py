@@ -1,72 +1,65 @@
-# --- 4. TRỢ LÝ AI NHẬN XÉT BÁO CÁO ---
-@account_report_bp.route('/ai-commentary', methods=['GET'])
+# --- 7. CHẤM ĐIỂM TÍN NHIỆM KHÁCH NỢ (Risk Support) ---
+@account_report_bp.route('/customer-risk/<int:customer_id>', methods=['GET'])
 @token_required
 @inject
-def get_ai_report_commentary(
-    service: AccountReportService = Provide[Container.account_report_service],
-    ai_service: any = Provide[Container.ai_assistant_service]
-):
-    """ AI đọc số liệu báo cáo và đưa ra lời khuyên kinh doanh """
+def get_customer_risk_profile(customer_id, service: AccountReportService = Provide[Container.account_report_service]):
+    """ 
+    Phân tích lịch sử trả nợ để cảnh báo mức độ rủi ro 
+    Giúp chủ shop quyết định có cho "ghi nợ" tiếp hay không.
+    """
     try:
         owner_id = get_owner_id()
-        # 1. Lấy dữ liệu thô từ Service báo cáo
-        raw_data = service.get_dashboard_with_growth(owner_id, 'this_month')
-        
-        # 2. Gửi dữ liệu sang AI Service để "dịch" thành văn bản
-        # Ví dụ: "Doanh thu của bạn tăng 10%, nhưng chi phí vận hành đang quá cao..."
-        commentary = ai_service.generate_report_insight(raw_data)
+        # Tính toán dựa trên: số lần trả chậm, tổng nợ hiện tại, thời gian nợ lâu nhất
+        risk_profile = service.analyze_customer_debt_behavior(owner_id, customer_id)
         
         return jsonify({
-            "success": True,
-            "commentary": commentary,
-            "suggestions": ["Cần giảm tồn kho mặt hàng A", "Tăng cường thu hồi công nợ nhóm B"]
-        }), 200
-    except Exception as e:
-        return jsonify({"error": "AI đang bận phân tích dữ liệu"}), 500
-
-# --- 5. CẢNH BÁO NGƯỠNG THUẾ (Tax Compliance Support) ---
-@account_report_bp.route('/tax-alerts', methods=['GET'])
-@token_required
-@inject
-def get_tax_alerts(service: AccountReportService = Provide[Container.account_report_service]):
-    """ Cảnh báo khi doanh thu tiến sát ngưỡng 100 triệu/năm hoặc các mốc thuế quan trọng """
-    try:
-        owner_id = get_owner_id()
-        # Tính tổng doanh thu lũy kế từ đầu năm
-        yearly_revenue = service.get_yearly_accumulated_revenue(owner_id)
-        
-        # Ngưỡng nộp thuế tại VN thường là 100tr/năm
-        threshold = 100000000 
-        status = "safe"
-        if yearly_revenue >= threshold * 0.9:
-            status = "warning"
-        if yearly_revenue >= threshold:
-            status = "taxable"
-
-        return jsonify({
-            "current_yearly_revenue": yearly_revenue,
-            "threshold": threshold,
-            "status": status,
-            "message": "Bạn sắp đạt ngưỡng doanh thu phải kê khai thuế GTGT." if status == "warning" else "Ổn định"
+            "customer_id": customer_id,
+            "risk_level": risk_profile['level'], # "Low", "Medium", "High"
+            "score": risk_profile['score'],      # 0 - 100
+            "advice": risk_profile['advice'],    # "Nên thu tiền mặt đơn này"
+            "debt_summary": risk_profile['summary']
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- 6. DỰ BÁO DÒNG TIỀN (Cash Flow Support) ---
-@account_report_bp.route('/cashflow/forecast', methods=['GET'])
+
+# --- 8. ĐĂNG KÝ NHẬN BÁO CÁO QUA TELEGRAM/ZALO (Notification Support) ---
+@account_report_bp.route('/notifications/subscribe', methods=['POST'])
 @token_required
 @inject
-def get_cashflow_forecast(service: AccountReportService = Provide[Container.account_report_service]):
-    """ Dự báo số tiền sẽ thu được trong 7 ngày tới dựa trên công nợ sắp đến hạn """
+def subscribe_daily_report(service: AccountReportService = Provide[Container.account_report_service]):
+    """ Đăng ký nhận tóm tắt doanh thu mỗi tối qua kênh chat """
+    try:
+        data = request.get_json()
+        owner_id = get_owner_id()
+        channel = data.get('channel') # 'telegram', 'zalo', 'push'
+        chat_id = data.get('chat_id')
+        
+        service.register_report_subscription(owner_id, channel, chat_id)
+        
+        return jsonify({"message": f"Đã đăng ký nhận báo cáo hàng ngày qua {channel}"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- 9. KIỂM TRA SỨC KHỎE TỔN KHO (Inventory Health) ---
+@account_report_bp.route('/inventory/health', methods=['GET'])
+@token_required
+@inject
+def get_inventory_health(service: AccountReportService = Provide[Container.account_report_service]):
+    """ Cảnh báo hàng tồn lâu ngày (Deadstock) hoặc sắp hết hàng """
     try:
         owner_id = get_owner_id()
-        # Lấy danh sách các khoản phải thu từ khách hàng sắp đến ngày hẹn trả
-        forecast = service.calculate_incoming_cashflow(owner_id)
+        # Tìm các mặt hàng > 60 ngày không có đơn phát sinh
+        deadstock = service.get_deadstock_list(owner_id)
+        # Tìm các mặt hàng dưới ngưỡng tối thiểu
+        low_stock = service.get_low_stock_alerts(owner_id)
         
         return jsonify({
-            "expected_incoming": forecast['total'],
-            "details": forecast['by_date'], # List: [{"date": "2024-06-01", "amount": 5000000}, ...]
-            "recommendation": "Bạn nên đôn đốc khách hàng A trả nợ để đủ tiền nhập hàng vào thứ 4."
+            "deadstock_count": len(deadstock),
+            "deadstock_value": sum(item.value for item in deadstock),
+            "low_stock_alerts": low_stock,
+            "suggestion": "Bạn nên chạy chương trình khuyến mãi cho nhóm hàng tồn lâu để thu hồi vốn."
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
