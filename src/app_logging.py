@@ -1,5 +1,5 @@
 import logging
-
+# Default logging format: [Time] [Level] [Message]
 def setup_logging(app=None): # Thêm app=None ở đây
     logging.basicConfig(
         level=logging.INFO,
