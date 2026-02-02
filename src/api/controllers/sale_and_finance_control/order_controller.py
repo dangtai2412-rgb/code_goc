@@ -4,6 +4,7 @@ from api.middlewares.auth_middleware import token_required
 from dependency_injector.wiring import inject, Provide
 from dependency_container import Container
 from services.sale_and_finance_service.order_service import OrderService
+from api.schemas.order import OrderRequestSchema, OrderResponseSchema # Import Schema
 
 order_bp = Blueprint('order_bp', __name__)
 
@@ -19,44 +20,37 @@ def post_order(order_service: OrderService = Provide[Container.order_service]):
     parameters:
       - in: body
         name: body
+        required: true
         schema:
-          required: [customer_id, details]
-          properties:
-            customer_id: {type: integer}
-            total_amount: {type: number}
-            paid_amount: {type: number}
-            payment_method: {type: string}
-            details:
-              type: array
-              items:
-                properties:
-                  product_id: {type: integer}
-                  quantity: {type: integer}
-                  unit_price: {type: number}
+          $ref: '#/definitions/OrderRequest' 
     responses:
-      201: {description: Tạo đơn hàng thành công}
+      201:
+        description: Tạo đơn hàng thành công
+        schema:
+          $ref: '#/definitions/OrderResponse'
     """
-    try:
-        data = request.get_json()
-        
-        # Lấy thông tin từ Dictionary 'current_user' được gắn vào request từ middleware
-        user_info = getattr(request, 'current_user', {})
-        
-        # 1. Xác định owner_id (Nếu là chủ thì user_id chính là owner_id)
-        token_owner_id = user_info.get('owner_id') or user_info.get('user_id')
-        data['owner_id'] = token_owner_id
-        
-        # 2. Lấy ID người trực tiếp tạo đơn
-        user_id = user_info.get('user_id')
+    # 1. Nhận và Validate dữ liệu
+    json_data = request.get_json()
+    schema = OrderRequestSchema()
+    # Dòng dưới sẽ tự ném ra lỗi ValidationError nếu dữ liệu sai -> error_handler sẽ bắt
+    validated_data = schema.load(json_data) 
+    
+    # 2. Lấy thông tin User từ Middleware (đã gán vào request.current_user)
+    user_info = request.current_user 
+    token_owner_id = user_info.get('owner_id') or user_info.get('user_id')
+    user_id = user_info.get('user_id')
 
-        result = order_service.create_order(data, user_id)
+    # Bổ sung thông tin vào data đã validate
+    validated_data['owner_id'] = token_owner_id
 
-        return jsonify({
-            "message": "Tạo đơn hàng thành công", 
-            "order_id": result.order_id
-        }), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    # 3. Gọi Service (Không cần try-except, nếu service lỗi, error_handler sẽ lo)
+    result = order_service.create_order(validated_data, user_id)
+
+    return jsonify({
+        "message": "Tạo đơn hàng thành công", 
+        "order_id": result.order_id
+    }), 201
+
 @order_bp.route('/', methods=['GET'])
 @token_required
 @inject
@@ -64,33 +58,21 @@ def get_order_list(order_service: OrderService = Provide[Container.order_service
     """
     Lấy danh sách đơn hàng của shop
     ---
-    tags: [Orders]
-    security:
-      - BearerAuth: []
+    tags: [Sales - Order]
+    security: [{BearerAuth: []}]
     responses:
       200:
-        description: Danh sách đơn hàng trả về thành công
+        description: Danh sách đơn hàng
         schema:
           type: array
           items:
-            type: object
-            properties:
-              order_id: {type: integer, example: 1}
-              total_amount: {type: number, example: 500000}
-              payment_status: {type: string, example: "PAID"}
-              order_date: {type: string, example: "2024-01-22T21:30:00"}
+            $ref: '#/definitions/OrderResponse'
     """
-    try:
-        # Lấy owner_id từ Token bảo mật
-        user_info = getattr(request, 'current_user', {})
-        owner_id = user_info.get('owner_id') or user_info.get('user_id') or user_info.get('id')
-        
-        if not owner_id:
-            return jsonify({"error": "Không tìm thấy thông tin chủ cửa hàng"}), 401
-            
-        orders = order_service.get_orders_by_owner(owner_id)
-        
-        # Chuyển đổi danh sách Model sang JSON (Đảm bảo OrderModel đã có hàm to_dict)
-        return jsonify([order.to_dict() for order in orders]), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    user_info = request.current_user
+    owner_id = user_info.get('owner_id') or user_info.get('user_id')
+    
+    orders = order_service.get_orders_by_owner(owner_id)
+    
+    # Dùng Schema để serialize danh sách object thành JSON
+    response_schema = OrderResponseSchema(many=True)
+    return jsonify(response_schema.dump(orders)), 200
