@@ -61,7 +61,7 @@ class SwaggerConfig:
         "swagger": "2.0",
         "info": {
             "title": "Todo API",
-            "description": "API for managing todos",
+            "description": "API for managing BizFlow business operations todos",
             "version": "1.0.0"
         },
         "basePath": "/",
