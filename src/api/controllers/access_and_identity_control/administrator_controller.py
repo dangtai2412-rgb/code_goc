@@ -5,16 +5,16 @@ from dependency_container import Container
 
 admin_bp = Blueprint('admin_bp', __name__)
 
+# --- ROUTE: CREATE ADMIN ---
 @admin_bp.route('/', methods=['POST'])
-@token_required 
-@inject
-# REMOVED: current_user (Access via request.current_user_id instead)
-def create(admin_service = Provide[Container.administrator_service]):
+@token_required  # Kiểm tra token trước
+@inject          # Sau đó mới inject service
+def create(admin_service: any = Provide[Container.administrator_service]):
     """
     Tạo tài khoản Administrator mới (Super Admin)
     ---
     tags: [Administrator]
-    security: [{BearerAuth: []}]  # ADDED: Essential for Swagger to send the token
+    security: [{BearerAuth: []}]
     parameters:
       - in: body
         name: body
@@ -28,33 +28,67 @@ def create(admin_service = Provide[Container.administrator_service]):
             password: {type: string, example: "admin123"}
     responses:
       201: {description: "Tạo thành công"}
-      400: {description: "Lỗi dữ liệu"}
+      400: {description: "Lỗi dữ liệu đầu vào"}
+      401: {description: "Không có quyền truy cập"}
     """
     try:
         data = request.get_json()
-        result = admin_service.create_admin(data)
-        return jsonify({"message": "Thành công", "id": result.admin_id}), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        
+        # Kiểm tra dữ liệu đầu vào cơ bản
+        if not data or not all(k in data for k in ("admin_name", "email", "password")):
+            return jsonify({"error": "Thiếu thông tin bắt buộc"}), 400
 
+        result = admin_service.create_admin(data)
+        
+        return jsonify({
+            "message": "Tạo tài khoản thành công", 
+            "id": result.admin_id
+        }), 201
+
+    except ValueError as ve: # Catch lỗi logic (ví dụ email đã tồn tại)
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"error": "Lỗi hệ thống nội bộ"}), 500
+
+
+# --- ROUTE: LIST ADMINS ---
 @admin_bp.route('/', methods=['GET'])
 @token_required
 @inject
-# REMOVED: current_user to maintain consistency and prevent 500 errors
-def list_admins(admin_service = Provide[Container.administrator_service]):
+def list_admins(admin_service: any = Provide[Container.administrator_service]):
     """
     Lấy danh sách admin
     ---
     tags: [Administrator]
     security: [{BearerAuth: []}]
     responses:
-      200: {description: "Success"}
+      200: 
+        description: "Lấy danh sách thành công"
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: integer}
+              name: {type: string}
+              email: {type: string}
     """
     try:
-        # Example: You can still get the user ID if needed:
-        # admin_who_requested = request.current_user_id 
+        # Lấy ID người gọi từ middleware nếu cần kiểm tra quyền
+        # requester_id = getattr(request, 'current_user_id', None)
         
         admins = admin_service.get_all_admins()
-        return jsonify([{"id": a.admin_id, "name": a.admin_name, "email": a.email} for a in admins]), 200
+        
+        # Chuyển đổi list object sang json
+        response_data = [
+            {
+                "id": a.admin_id, 
+                "name": a.admin_name, 
+                "email": a.email
+            } for a in admins
+        ]
+        
+        return jsonify(response_data), 200
+        
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Không thể lấy danh sách admin"}), 500
